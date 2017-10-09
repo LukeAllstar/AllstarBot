@@ -1,0 +1,7 @@
+{
+	"token": "<token>",
+	"log_level": 2,
+	"command_prefix": "!",
+	"ignore_modules": [".gitignore", "__pycache__","module.py"],
+	"description": "Allstar Bot"
+}
