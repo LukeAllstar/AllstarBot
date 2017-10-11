@@ -54,7 +54,100 @@ async def player_win_month(month : int):
         s += '| {:20s}| {:10s}|\n'.format(str(row[0]), str(row[1]))
     s += '```'
     await bot.say(s)
-    
+
+@bot.command()
+async def playersofgame(game : str):
+    """ Returns all players who played a certain game """
+    s = "```Spieler des Spieles " + game + ":\n"
+    first = True
+    for row in c.execute("""Select player.name
+                                from played
+                                join player on played.playerid = player.rowid
+                                join game on played.gameid = game.rowid
+                                where game.name = '""" + game + """'
+                                group by player.name"""):
+        if first == False:
+            s += ", "
+        else:
+            first = False
+        s += row[0]
+    s += "```"
+    await bot.say(s)
+
+@bot.command()
+async def winpercent(player : str, game : str = ""):
+    """ Returns the winpercent of a player. If game is given, it returns the winpercent for that game """
+    """ TODO: Maybe have "all" as playername for winpercent of all players? """
+    s = "```Winpercent for player " + player + ""
+    gameName = ""
+    if game != "":
+        try:
+            # check if the game exists
+            # if multiple games have been found, print an error with information
+            errMsg = "```Es wurden mehrere Spiele fuer den Namen '" + game + "' gefunden:\n"
+            error = False
+            for row in c.execute("""Select game.name
+                                from game
+                                where LOWER(game.name) like '%""" + game.lower() + """%'
+                                group by game.name"""):
+                  
+                if error == True:
+                    errMsg += row[0] + "\n"
+                else:
+                    if gameName != "":
+                        error = True
+                        errMsg += gameName + "\n"
+                        errMsg += row[0] + "\n"
+                    else:
+                        gameName = row[0]
+            if error == True:
+                errMsg += "```"
+                await bot.say(errMsg)
+                return
+            s += " im Spiel " + gameName
+        except:
+            # Something went wrong, maybe print a better error
+            await bot.say("Something went wrong :(")
+            return
+                 
+    s += ":\n"
+    try:
+        # get number of wins
+        c.execute("""Select count(player.name)
+                            from played
+                            join player on played.playerid = player.rowid
+                            join game on played.gameid = game.rowid
+                            where LOWER(player.name) like '%""" + player.lower() + """%'
+                                AND LOWER(game.name) like '%""" + gameName + """%'
+                                AND played.rank = 1
+                                AND played.iscoop = 'False'
+                            group by player.name""")
+
+        wins = int(c.fetchone()[0])
+    except:
+        wins = 0
+        
+    try:
+        # get number of games played
+        c.execute("""Select count(*)
+                                from played
+                                join player on played.playerid = player.rowid
+                                join game on played.gameid = game.rowid
+                                where LOWER(player.name) like '%""" + player.lower() + """%'
+                                    AND LOWER(game.name) like '%""" + gameName + """%'
+                                    AND played.iscoop = 'False'""")
+        games = int(c.fetchone()[0])
+        winpercent = 100/games*wins
+        s += str(round(winpercent,2)) + "% (" + str(games) + " Spiele, " + str(wins) + " Siege)"
+        s += "```"
+        await bot.say(s)
+    except:
+        await bot.say("Keine Eintraege fuer Spieler " + player + " gefunden :persevere:")
+
+#async def winpercentgame(player : str, game : str = ""):
+
+
+
 #@bot.command()
 #async def phil():
 #    await bot.say('Der schoenste Oesterreicher :flag_at:')
@@ -73,7 +166,7 @@ async def quote(name : str = ""):
     if(row != None):
         await bot.say('```\"%s\" - %s```' % (row[0], row[1]))
     else:
-        await bot.say("Kein Zitat von der Person %s gefunden." % name)
+        await bot.say("Kein Zitat von '%s' gefunden.\nHier nimm ein :ice_cream: stattdessen." % name)
     
 @bot.command(pass_context=True, aliases=["addzitat"])
 async def addquote(ctx, quote : str, name : str):
