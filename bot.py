@@ -60,11 +60,12 @@ async def playersofgame(game : str):
     """ Returns all players who played a certain game """
     s = "```Spieler des Spieles " + game + ":\n"
     first = True
+    # TODO: check which games exist for that pattern, like in winpercent function
     for row in c.execute("""Select player.name
                                 from played
                                 join player on played.playerid = player.rowid
                                 join game on played.gameid = game.rowid
-                                where game.name = '""" + game + """'
+                                where LOWER(game.name) like '%""" + game.lower() + """%'
                                 group by player.name"""):
         if first == False:
             s += ", "
