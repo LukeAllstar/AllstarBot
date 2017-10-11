@@ -1,12 +1,10 @@
-#!/usr/bin/python2.4
-
 #from __future__ import print_function
 import httplib2
 import os
 #import psycopg2
 import sqlite3
 
-from apiclient import discovery
+from googleapiclient import discovery
 from oauth2client import client
 from oauth2client import tools
 from oauth2client.file import Storage
@@ -19,13 +17,12 @@ except ImportError:
 
 
 try:
-    #conn = psycopg2.connect("dbname='Tabletop' user='postgres' host='localhost' password=''")
-
-    #cur.execute("SET search_path TO public")
-
     delete = True
     if delete == True:
-        os.remove('tabletop.db')
+        try:
+            os.remove('tabletop.db')
+        except OSError:
+            pass
 
     conn = sqlite3.connect('tabletop.db')
     cur = conn.cursor()
@@ -57,7 +54,7 @@ try:
         cur.execute("Delete from played")
         
 except:
-    print "I am unable to connect to the database"#
+    print("I am unable to connect to the database")
     exit()
     
         
@@ -223,8 +220,9 @@ def insertPlayed(players, points, game, playDate):
         print(idx, player)
         if player != None:
             # spieler zur db fuegen
-            p = player[0]
+
             if isCoop == True:
+                p = player[0]
                 if len(player) == 2:
                     text = player[1]
                 else:
@@ -238,10 +236,11 @@ def insertPlayed(players, points, game, playDate):
                     addPlayed(coopPlayer.strip(), playedId, game, playDate, 0, 0, True)
                 isCoop = True
             else:
-                print(points)
-                print("Spieler %s mit platzierung %s und punkten %s" % (p, idx+1, points[idx]))
-                checkPlayer(p)
-                addPlayed(p, playedId, game, playDate, idx + 1, points[idx], False)
+                for p in player:
+                    print(points)
+                    print("Spieler %s mit platzierung %s und punkten %s" % (p, idx+1, points[idx]))
+                    checkPlayer(p)
+                    addPlayed(p, playedId, game, playDate, idx + 1, points[idx], False)
 
 def checkPlayer(playername):
     if playername not in playernames:
@@ -289,7 +288,7 @@ def addPlayed(player, playedId, game, playDate, rank, points, isCoop):
     #VALUES ('%s','%s','%s','%s','%s','%s', to_date('1900.01.01','YYYY.MM.DD') + interval '1 day' * (%d - 2))""" % (playedId, #playerId, gameId, rank, points, isCoop, playDate))
     print("playdate: %s" % playDate)
     cur.execute("""Insert into played (playedId, playerId, gameId, rank, points, isCoop, playDate)
-    VALUES ('%s','%s','%s','%s','%s','%s', datetime(0000000000, 'unixepoch', '-70 year', '+%s day'))""" % (playedId, playerId, gameId, rank, points, isCoop, playDate))
+    VALUES ('%s','%s','%s','%s','%s','%s', datetime(0000000000, 'unixepoch', '-70 year', '+%s day'))""" % (playedId, playerId, gameId, rank, points, isCoop, playDate-2))
 
 def getNextPlayedId():
     cur.execute("""Select COALESCE(MAX(rowid),0) from played""")
