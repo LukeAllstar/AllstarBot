@@ -93,12 +93,12 @@ async def winpercent(player : str, game : str = ""):
                                 group by game.name"""):
                   
                 if error == True:
-                    errMsg += row[0] + "\n"
+                    errMsg += "'" + row[0] + "', "
                 else:
                     if gameName != "":
                         error = True
-                        errMsg += gameName + "\n"
-                        errMsg += row[0] + "\n"
+                        errMsg += "'" + gameName + "', "
+                        errMsg += "'" + row[0] + "', "
                     else:
                         gameName = row[0]
             if error == True:
@@ -145,8 +145,65 @@ async def winpercent(player : str, game : str = ""):
     except:
         await bot.say("Keine Eintraege fuer Spieler " + player + " gefunden :persevere:")
 
-#async def winpercentgame(player : str, game : str = ""):
 
+@bot.command()
+async def wins(player : str, game : str = ""):
+    """ Returns how many wins a player has """
+    """ If game is given, returns the wins for that game """
+    #s = "```Spieler " + player + "
+    gameName = ""
+    if game != "":
+        try:
+            # check if the game exists
+            # if multiple games have been found, print an error with information
+            # TODO: put this into a seperate function, is needed multiple times
+            errMsg = "```Es wurden mehrere Spiele fuer den Namen '" + game + "' gefunden:\n"
+            error = False
+            for row in c.execute("""Select game.name
+                                from game
+                                where LOWER(game.name) like '%""" + game.lower() + """%'
+                                group by game.name"""):
+                  
+                if error == True:
+                    errMsg += "'" + row[0] + "', "
+                else:
+                    if gameName != "":
+                        error = True
+                        errMsg += "'" + gameName + "', "
+                        errMsg += "'" + row[0] + "', "
+                    else:
+                        gameName = row[0]
+            if error == True:
+                errMsg += "```"
+                await bot.say(errMsg)
+                return
+        except:
+            # Something went wrong, maybe print a better error
+            print(e.strerror)
+            await bot.say("Something went wrong :(")
+            return
+                 
+    try:
+        # get number of wins
+        c.execute("""Select count(player.name)
+                            from played
+                            join player on played.playerid = player.rowid
+                            join game on played.gameid = game.rowid
+                            where LOWER(player.name) like '%""" + player.lower() + """%'
+                                AND LOWER(game.name) like '%""" + gameName + """%'
+                                AND played.rank = 1
+                                AND played.iscoop = 'False'
+                            group by player.name""")
+
+        wins = int(c.fetchone()[0])
+    except:
+        wins = 0
+        
+    s = "```Spieler '" + player + "' hat " + str(wins) + " Siege"
+    if gameName != "":
+        s += " im Spiel '" + gameName + "'"
+    s += "```"
+    await bot.say(s)
 
 
 #@bot.command()
