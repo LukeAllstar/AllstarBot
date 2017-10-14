@@ -64,7 +64,7 @@ class Gtasheet:
                 self.cur.execute('''CREATE TABLE player(
                                 name TEXT)''')
                 self.cur.execute('''CREATE TABLE raced(
-                            racenumber INT,
+                            raceid INT,
                             playerid INT,
                             rank INT,
                             bestlap INT,
@@ -72,7 +72,8 @@ class Gtasheet:
                             vehicle TEXT,
                             money INT,
                             isdnf INT,
-                            FOREIGN KEY(racenumber) REFERENCES race(racenumber),
+                            isdsq INT,
+                            FOREIGN KEY(raceid) REFERENCES race(rowid),
                             FOREIGN KEY(playerid) REFERENCES player(ROWID))''')
                 self.conn.commit()
                 
@@ -144,7 +145,7 @@ class Gtasheet:
         points = [None] * 7
         game = ''
         playDate = 0
-        racenumber = None
+        raceid = None
         playlistid = None
         
         if not values:
@@ -159,15 +160,16 @@ class Gtasheet:
                     # new playlist
                     self.insertPlaylist(row[8], row[9])
                 
-                if len(row) >= 8 and row[0] != None and row[0] != "":
+                if len(row) >= 8 and row[2] != None and row[2] != "":
                     # new race
-                    if racenumber == None:
+                    if raceid == None:
                         isCanceled = False
                         if row[1] == None or row[1] == "":
                             isCanceled = True
                         playlistid = int(self.getCurrentPlaylistId())
                         racenumber = self.getNextRaceNumber(playlistid)
                         self.insertRace(playlistid, racenumber, isCanceled)
+                        raceid = self.getCurrentRaceId()
                         rank = 0
 
                     # new raced
@@ -179,11 +181,11 @@ class Gtasheet:
                     money = row[6]                   
                     
                     self.checkPlayer(player)
-                    self.insertRaced(racenumber, rank, bestlap, racetime, vehicle, player, money)
-                    
+                    self.insertRaced(raceid, rank, bestlap, racetime, vehicle, player, money)
+                    rank += 1
                 else:
                     playlistid = None
-                    racenumber = None
+                    raceid = None
                 
         self.conn.commit()
         self.end()
@@ -217,21 +219,25 @@ class Gtasheet:
         self.cur.execute("""INSERT INTO race (playlistid, racenumber, isCanceled)
                             VALUES(%s, %s, '%s')""" % (playlistid, racenumber, isCanceled))
     
-    def insertRaced(self, racenumber, rank, bestlap, racetime, vehicle, player, money):
+    def insertRaced(self, raceid, rank, bestlap, racetime, vehicle, player, money):
         if bestlap == "-":
             bestlap = 0
         isdnf = False    
         if racetime == "DNF":
             racetime = 0
             isdnf = True
+
+        isDisqualified = False
+        if vehicle == "DSQ":
+            isDisqualified = True
             
         playerid = self.playernames[player]
-        print("Inserting player %s, race %s, bestlap %s, racetime %s, vehicle %s, rank %s, money %s, isdnf %s"
-                % (playerid, racenumber, bestlap, racetime, vehicle, rank, money, isdnf))
+        print("Inserting player %s, raceid %s, bestlap %s, racetime %s, vehicle %s, rank %s, money %s, isdnf %s, isdsq %s"
+                % (playerid, raceid, bestlap, racetime, vehicle, rank, money, isdnf, isDisqualified))
 
-        self.cur.execute("""INSERT INTO raced(playerid, racenumber, bestlap, racetime, vehicle, rank, money, isdnf)
-                        VALUES("%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s")"""
-                        % (playerid, racenumber, bestlap, racetime, vehicle, rank, money, isdnf))
+        self.cur.execute("""INSERT INTO raced(playerid, raceid, bestlap, racetime, vehicle, rank, money, isdnf, isdsq)
+                        VALUES("%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s")"""
+                        % (playerid, raceid, bestlap, racetime, vehicle, rank, money, isdnf, isDisqualified))
     
     def getNextRaceNumber(self, playlistid):
         self.cur.execute("""Select COALESCE(MAX(racenumber), 0) from race
@@ -239,16 +245,16 @@ class Gtasheet:
         rows = self.cur.fetchone()
         return rows[0] + 1
     
-    def getNextPlayedId(self):
-        self.cur.execute("""Select COALESCE(MAX(rowid),0) from played""")
-        rows = self.cur.fetchall()
-        return rows[0][0] + 1
+    def getCurrentRaceId(self):
+        self.cur.execute("""Select COALESCE(MAX(rowid), 0) from race""")
+        rows = self.cur.fetchone()
+        return rows[0] + 1
         
     def end(self):
         self.cur.close()
         self.conn.close()
  
 # just here for testing 
-#if __name__ == '__main__':
-#    gta = Gtasheet(True, True) 
-#    gta.update_database()
+if __name__ == '__main__':
+    gta = Gtasheet(True, True) 
+    gta.update_database()
