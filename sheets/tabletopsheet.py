@@ -1,7 +1,5 @@
-#from __future__ import print_function
 import httplib2
 import os
-#import psycopg2
 import sqlite3
 
 from googleapiclient import discovery
@@ -39,12 +37,9 @@ class Tabletop:
         try:
             if self.delete == True:
                 try:
-                    #self.conn.close()
                     print("removing db/tabletop.db")
                     os.remove('db/tabletop.db')
                     print("removed db/tabletop.db")
-                    #self.conn = sqlite3.connect('db/tabletop.db')
-                    #self.cur = self.conn.cursor()
                 except OSError as e:
                     print(e)
                     raise Exception("can't remove file db/tabletop.db")
@@ -145,10 +140,6 @@ class Tabletop:
             counter = 0
             isCoop = False
             for row in values:
-                # Print columns A and E, which correspond to indices 0 and 4.
-                #print('%s, %s, %s, %s, %s' % (row[2],row[3],row[4],row[5],row[6]))
-                #print('%s' % row)
-                #print('Players')
                 if len(row) == 1:
                     # nur ein eintrag in der zeile -> neuer spielname
                     # zuvor ueberpruefen ob vorige daten rausgeschrieben werden muessen
@@ -163,7 +154,6 @@ class Tabletop:
                 elif len(row) != 0:
                     # counter will be used to count the number of cells
                     counter = 0
-                    #pointsRow = False
                     for cell in row:
                         if counter == 0:
                             # image .. maybe use this later
@@ -171,33 +161,13 @@ class Tabletop:
                         if counter == 1:
                             if cell != '':
                                 # neuer eintrag -> vorherige daten rausschreiben, anschliesen neu initialisieren   
-                                
-                                #print('players')
-                                #print(players)
-                                #playedId = getNextPlayedId()
-                                #for idx, player in enumerate(players):
-                                #    # we have a 2 dimensional array
-                                #    print(idx, player)
-                                #    if player != None:
-                                #        for p in player:
-                                #            # spieler zur db fuegen
-                                #            if "," in p:
-                                #                print("--- FOUND COOP GAME ---")
-                                #                isCoop = True
-                                #            elif isCoop == False:
-                                #                print("Spieler %s mit platzierung %s und punkten %s" % (p, idx+1, points[idx]))
-                                #                checkPlayer(p)
-                                #                addPlayed(p, playedId, game, playDate, idx + 1, points[idx], False)
-                                       
                                 self.insertPlayed(players, points, game, playDate)
                                 
-                                #print('score')
-                                #print(points)
                                 players = [None] * 7
                                 points = [None] * 7
                                 isCoop = False               
                                 playDate = cell
-                                print('date: %s' % playDate)
+                                #print('date: %s' % playDate)
                         elif counter > 1:
                             if cell != '' and cell != '-':
                                 # minus 2 because first two cells are for screenshot and date
@@ -209,7 +179,7 @@ class Tabletop:
                                     players[counter-2].append(cell)
                         counter += 1
                         
-        # letzten datensatz schreiben
+        # write last row because we normally write when the next row has been found
         self.insertPlayed(players, points, game, playDate)
         self.conn.commit()
         self.end()
@@ -239,8 +209,7 @@ class Tabletop:
             # we have a 2 dimensional array
             print(idx, player)
             if player != None:
-                # spieler zur db fuegen
-
+                # add player to database
                 if isCoop == True:
                     p = player[0]
                     if len(player) == 2:
@@ -263,8 +232,7 @@ class Tabletop:
                         self.addPlayed(p, playedId, game, playDate, idx + 1, points[idx], False)
 
     def checkPlayer(self, playername):
-        if playername not in self.playernames:
-            #playernames.append([])       
+        if playername not in self.playernames:     
             self.cur.execute("""Select rowid from player where name='%s'""" % playername)
             rows = self.cur.fetchall()
             if len(rows) == 0:
@@ -274,14 +242,10 @@ class Tabletop:
                 # need the id after its inserted
                 self.cur.execute("""Select rowid from player where name='%s'""" % playername)
                 rows = self.cur.fetchall()
-            # erste zeile erste spalte
             self.playernames[playername] = rows[0][0]
-            #print("playernames")
-            #print(playernames)
             
     def checkGame(self, game):
         if game not in self.games:
-            #games.append(game)
             self.cur.execute("""Select rowid from game where name='%s'""" % game)
             rows = self.cur.fetchall()
             if len(rows) == 0:
@@ -291,22 +255,13 @@ class Tabletop:
                 # need the id after its inserted
                 self.cur.execute("""Select rowid from game where name='%s'""" % game)
                 rows = self.cur.fetchall()
-            # erste zeile erste spalte
             self.games[game] = rows[0][0]
-            #print("games")
-            #print(games)
             
     def addPlayed(self, player, playedId, game, playDate, rank, points, isCoop):
         playerId = self.playernames[player]
         gameId = self.games[game]
-
-        #print("""Insert into played (rowid, playerId, gameId, rank, points, isCoop, playDate)
-        #VALUES ('%s','%s','%s','%s','%s','%s', to_date('1900.01.01','YYYY.MM.DD') + interval '1 day' * (%d - 2))""" % (playedId, playerId, gameId, rank, points, isCoop, playDate))
-        
         # playDate ist ein 5 stelliger wert der die tage ab dem 1.1.1900 angiebt. minus 2 weil keine ahnung .. war immer um 2 zu viel
-        #cur.execute("""Insert into played (rowid, playerId, gameId, rank, points, isCoop, playDate)
-        #VALUES ('%s','%s','%s','%s','%s','%s', to_date('1900.01.01','YYYY.MM.DD') + interval '1 day' * (%d - 2))""" % (playedId, #playerId, gameId, rank, points, isCoop, playDate))
-        print("playdate: %s" % playDate)
+        #print("playdate: %s" % playDate)
         self.cur.execute("""Insert into played (playedId, playerId, gameId, rank, points, isCoop, playDate)
         VALUES ('%s','%s','%s','%s','%s','%s', datetime(0000000000, 'unixepoch', '-70 year', '+%s day'))""" % (playedId, playerId, gameId, rank, points, isCoop, playDate-2))
 
@@ -319,6 +274,7 @@ class Tabletop:
         self.cur.close()
         self.conn.close()
     
-if __name__ == '__main__':
-    tabletop = Tabletop(True, True) 
-    tabletop.update_database()
+# just here for testing 
+#if __name__ == '__main__':
+#    tabletop = Tabletop(True, True) 
+#    tabletop.update_database()

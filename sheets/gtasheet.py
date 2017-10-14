@@ -1,7 +1,5 @@
-#from __future__ import print_function
 import httplib2
 import os
-#import psycopg2
 import sqlite3
 
 from googleapiclient import discovery
@@ -40,7 +38,6 @@ class Gtasheet:
         try:
             if self.delete == True:
                 try:
-                    #self.conn.close()
                     print("removing db/gta.db")
                     os.remove('db/gta.db')
                     print("removed db/gta.db")
@@ -156,13 +153,10 @@ class Gtasheet:
             counter = 0
             isCoop = False
             for row in values:
-                # Print columns A and E, which correspond to indices 0 and 4.
-                #print('%s, %s, %s, %s, %s' % (row[2],row[3],row[4],row[5],row[6]))
-                print('%s' % row)
+                #print('%s' % row)
                 
                 if(len(row) >= 9 and row[8] != None):
                     # new playlist
-                    print(str(row[8]) + " - " + str(row[9]))
                     self.insertPlaylist(row[8], row[9])
                 
                 if len(row) >= 8 and row[0] != None and row[0] != "":
@@ -193,64 +187,16 @@ class Gtasheet:
                 
         self.conn.commit()
         self.end()
-        
-    def isInt(self,s):
-        try: 
-            int(s)
-            return True
-        except ValueError:
-            return False
 
     def insertPlaylist(self, name, date):
         print("Inserting %s at date %s" % (name, date))
         self.cur.execute("""INSERT INTO playlist(name, date)
                             VALUES('"""+name+"""', strftime('%d.%m.%Y','"""+date+"""'))""")
     
-    
-    def insertPlayed(self,players, points, game, playDate):
-        print('players')
-        print(players)
-        playedId = self.getNextPlayedId()
-        isCoop = False
-        for idx, player in enumerate(players):
-            if player != None:
-                for p in player:
-                    if "," in p:
-                        isCoop = True
-                
-        if isCoop == True:
-            print("--- FOUND COOP GAME ---")
-            
-        for idx, player in enumerate(players):
-            # we have a 2 dimensional array
-            print(idx, player)
-            if player != None:
-                # spieler zur db fuegen
-
-                if isCoop == True:
-                    p = player[0]
-                    if len(player) == 2:
-                        text = player[1]
-                    else:
-                        text = ''
-                    # TODO: Add victory text
-                    # TODO: Add game won/lost
-                    coopPlayers = p.split(",")
-                    for coopPlayer in coopPlayers:
-                        print("Coop Player %s with text %s" % (coopPlayer.strip(),text))
-                        # Rank and Points are set to 0 for now
-                        self.addPlayed(coopPlayer.strip(), playedId, game, playDate, 0, 0, True)
-                    isCoop = True
-                else:
-                    for p in player:
-                        print(points)
-                        print("Spieler %s mit platzierung %s und punkten %s" % (p, idx+1, points[idx]))
-                        self.checkPlayer(p)
-                        self.addPlayed(p, playedId, game, playDate, idx + 1, points[idx], False)
 
     def checkPlayer(self, playername):
-        if playername not in self.playernames:
-            #playernames.append([])       
+        # search for player in local var and database, otherwise create him
+        if playername not in self.playernames:  
             self.cur.execute("""Select rowid from player where name='%s'""" % playername)
             rows = self.cur.fetchall()
             if len(rows) == 0:
@@ -260,42 +206,8 @@ class Gtasheet:
                 # need the id after its inserted
                 self.cur.execute("""Select rowid from player where name='%s'""" % playername)
                 rows = self.cur.fetchall()
-            # erste zeile erste spalte
             self.playernames[playername] = rows[0][0]
-            #print("playernames")
-            #print(playernames)
             
-    def checkGame(self, game):
-        if game not in self.games:
-            #games.append(game)
-            self.cur.execute("""Select rowid from game where name='%s'""" % game)
-            rows = self.cur.fetchall()
-            if len(rows) == 0:
-                # nicht gefunden
-                self.cur.execute("""Insert Into game (name) VALUES ('%s')""" % game)
-                print("#### Added game %s to the database ####" % game)
-                # need the id after its inserted
-                self.cur.execute("""Select rowid from game where name='%s'""" % game)
-                rows = self.cur.fetchall()
-            # erste zeile erste spalte
-            self.games[game] = rows[0][0]
-            #print("games")
-            #print(games)
-            
-    def addPlayed(self, player, playedId, game, playDate, rank, points, isCoop):
-        playerId = self.playernames[player]
-        gameId = self.games[game]
-
-        #print("""Insert into played (rowid, playerId, gameId, rank, points, isCoop, playDate)
-        #VALUES ('%s','%s','%s','%s','%s','%s', to_date('1900.01.01','YYYY.MM.DD') + interval '1 day' * (%d - 2))""" % (playedId, playerId, gameId, rank, points, isCoop, playDate))
-        
-        # playDate ist ein 5 stelliger wert der die tage ab dem 1.1.1900 angiebt. minus 2 weil keine ahnung .. war immer um 2 zu viel
-        #cur.execute("""Insert into played (rowid, playerId, gameId, rank, points, isCoop, playDate)
-        #VALUES ('%s','%s','%s','%s','%s','%s', to_date('1900.01.01','YYYY.MM.DD') + interval '1 day' * (%d - 2))""" % (playedId, #playerId, gameId, rank, points, isCoop, playDate))
-        print("playdate: %s" % playDate)
-        self.cur.execute("""Insert into played (playedId, playerId, gameId, rank, points, isCoop, playDate)
-        VALUES ('%s','%s','%s','%s','%s','%s', datetime(0000000000, 'unixepoch', '-70 year', '+%s day'))""" % (playedId, playerId, gameId, rank, points, isCoop, playDate-2))
-
     def getCurrentPlaylistId(self):
         self.cur.execute("""Select COALESCE(MAX(rowid), 0) from playlist""")
         rows = self.cur.fetchone()
@@ -335,7 +247,8 @@ class Gtasheet:
     def end(self):
         self.cur.close()
         self.conn.close()
-    
-if __name__ == '__main__':
-    gta = Gtasheet(True, True) 
-    gta.update_database()
+ 
+# just here for testing 
+#if __name__ == '__main__':
+#    gta = Gtasheet(True, True) 
+#    gta.update_database()
