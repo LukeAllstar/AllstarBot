@@ -274,6 +274,15 @@ async def gtaracewins(player : str = None):
         await bot.say('```Spieler %s hat %s Rennen gewonnen```' % (player, row[0]))
   
 #@bot.command()
+#async def gtavehicles():
+#    """ Returns how often each vehicle has been used """
+#    for row in gtaCur.execute("""Select vehicle, count(*) from (
+#                                Select vehicle from raced
+#                                group by racenumber, vehicle)
+#                                    group by vehicle""")
+# TODO
+  
+#@bot.command()
 #async def gtaplaylistwins(player : str):
 #    """ Returns the number of playlist wins of a player """
     
@@ -287,12 +296,16 @@ async def updatetabletop():
         await bot.say("Updating Tabletop Database ...")
         tts = sheets.Tabletop(True, True)
         tts.update_database()
-        ttsConn = sqlite3.connect('db/tabletop.db')
-        ttsCur = ttsConn.cursor()
         await bot.say("Update finished!")
     except Exception as e:
         print(e)
         await bot.say("Error, check log :robot:")
+        
+    try:
+        ttsConn = sqlite3.connect('db/tabletop.db')
+        ttsCur = ttsConn.cursor()
+    except Exception as e:
+        print(e)
 
 @bot.command()
 async def updategta():
@@ -304,12 +317,16 @@ async def updategta():
         gtaConn.close()
         gta = sheets.Gtasheet(True, True)
         gta.update_database()
-        gtaConn = sqlite3.connect('db/gta.db')
-        gtaCur = gtaConn.cursor()
         await bot.say("Update finished!")
     except Exception as e:
         print(e)
         await bot.say("Error, check log :robot:")
+
+    try:
+        gtaConn = sqlite3.connect('db/gta.db')
+        gtaCur = gtaConn.cursor()
+    except Exception as e:
+        print(e)
 
         
 bot.run(data["token"])
