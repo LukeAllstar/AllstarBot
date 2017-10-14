@@ -273,14 +273,25 @@ async def gtaracewins(player : str = None):
         row = gtaCur.fetchone()
         await bot.say('```Spieler %s hat %s Rennen gewonnen```' % (player, row[0]))
   
-#@bot.command()
-#async def gtavehicles():
-#    """ Returns how often each vehicle has been used """
-#    for row in gtaCur.execute("""Select vehicle, count(*) from (
-#                                Select vehicle from raced
-#                                group by racenumber, vehicle)
-#                                    group by vehicle""")
-# TODO
+@bot.command()
+async def gtavehicles():
+    """ Returns how often each vehicle has been used """
+    s = "```"
+    s += "Die 7 meistverwendetsten Fahrzeuge:\n"
+    s += "| {:20s}| {:10s}|\n".format("Vehicle", "Anzahl")
+    s += ('-' * 35)
+    s += "\n"
+    for row in gtaCur.execute("""Select vehicle, count(*) from (
+                                    Select vehicle from raced
+                                    group by raceid, vehicle
+                                    )
+                                  group by vehicle
+								  order by 2 desc
+								  limit 7"""):
+        s += '| {:20s}| {:10s}|\n'.format(str(row[0]), str(row[1]))
+    s += '```'
+    await bot.say(s)
+
   
 #@bot.command()
 #async def gtaplaylistwins(player : str):
