@@ -102,3 +102,4 @@ ENV/
 
 # sqlite database files
 *.db
+db/
