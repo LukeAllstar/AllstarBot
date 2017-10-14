@@ -278,15 +278,17 @@ async def gtaracewins(player : str = None):
 #    """ Returns the number of playlist wins of a player """
     
 @bot.command()
-async def updatetabletop():
+async def updatetabletop():   
     try:
-        await bot.say("Updating Tabletop Database ...")
+        global ttsCur
+        global ttsConn
         ttsCur.close()
         ttsConn.close()
+        await bot.say("Updating Tabletop Database ...")
         tts = sheets.Tabletop(True, True)
         tts.update_database()
-        #ttsConn = sqlite3.connect('db/tabletop.db')
-        #ttsCur = ttsConn.cursor()
+        ttsConn = sqlite3.connect('db/tabletop.db')
+        ttsCur = ttsConn.cursor()
         await bot.say("Update finished!")
     except Exception as e:
         print(e)
@@ -295,16 +297,19 @@ async def updatetabletop():
 @bot.command()
 async def updategta():
     try:
+        global gtaCur
+        global gtaConn
         await bot.say("Updating Gta Database ...")
         gtaCur.close()
         gtaConn.close()
         gta = sheets.Gtasheet(True, True)
         gta.update_database()
-        #gtaConn = sqlite3.connect('db/gta.db')
-        #gtaCur = gtaConn.cursor()
+        gtaConn = sqlite3.connect('db/gta.db')
+        gtaCur = gtaConn.cursor()
         await bot.say("Update finished!")
     except Exception as e:
         print(e)
         await bot.say("Error, check log :robot:")
+
         
 bot.run(data["token"])
