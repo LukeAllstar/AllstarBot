@@ -11,7 +11,6 @@ class Gtasheet:
     conn = None
     cur = None
     playernames = {}
-    games = {}  
     delete = False
     create = False
     
@@ -31,6 +30,8 @@ class Gtasheet:
         
     def initgta(self):
         print('initgta')
+        playernames = {}
+        
         if not os.path.exists('db'):
             print('Creating directory db')
             os.makedirs('db')
@@ -230,6 +231,7 @@ class Gtasheet:
         isDisqualified = False
         if vehicle == "DSQ":
             isDisqualified = True
+            vehicle = ""
             
         playerid = self.playernames[player]
         print("Inserting player %s, raceid %s, bestlap %s, racetime %s, vehicle %s, rank %s, money %s, isdnf %s, isdsq %s"
@@ -248,7 +250,7 @@ class Gtasheet:
     def getCurrentRaceId(self):
         self.cur.execute("""Select COALESCE(MAX(rowid), 0) from race""")
         rows = self.cur.fetchone()
-        return rows[0] + 1
+        return rows[0]
         
     def end(self):
         self.cur.close()
