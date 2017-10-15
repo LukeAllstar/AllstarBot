@@ -338,7 +338,42 @@ async def gtaplaylistwins():
         s += '| {:20s}| {:10s}|\n'.format(str(row[0]), str(row[1]))
     s += '```'
     await bot.say(s)
-    
+   
+@bot.command()
+async def gtaplaylist(playlist : str = ""):
+    if playlist == "":
+        await bot.say("```!gtaplaylist <playlist>```")
+    else:
+        s = "```"
+        s += "Ergebnis fuer Playlist %s\n" % playlist
+        s += "|{:6}| {:20s}| {:6s}|\n".format("Rang","Spieler", "Punkte")
+        s += ('-' * 38)
+        s += "\n"
+        rank = 1
+        for row in gtaCur.execute("""
+                        Select player.name, sum(points) as points from (
+                            Select *,
+                                    CASE
+                                    WHEN isdsq = 'True' OR isdnf = 'True' THEN 0
+                                    WHEN rank = 1 THEN 15
+                                    WHEN rank = 2 THEN 12
+                                    WHEN rank = 3 THEN 10
+                                    WHEN rank BETWEEN 4 AND 10 THEN 12 - rank
+                                    ELSE 1
+                                    END as points from
+                                playlist
+                                join race on race.playlistid = playlist.rowid
+                                join raced on raced.raceid = race.rowid
+                                where playlist.name='"""+playlist+"""'
+                            ) as x
+                            join player on playerid = player.rowid
+                            group by player.name
+                                order by points desc"""):
+            s += "|{:6}| {:20s}| {:6s}|\n".format(str(rank),str(row[0]), str(row[1]))
+            rank += 1
+        s += "```"
+        await bot.say(s)
+        
 @bot.command()
 async def updatetabletop():   
     try:
@@ -380,6 +415,7 @@ async def updategta():
         gtaCur = gtaConn.cursor()
     except Exception as e:
         print(e)
+
 
 @bot.command(pass_context=True)
 async def friends(ctx):
