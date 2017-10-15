@@ -16,6 +16,8 @@ if not os.path.exists('db/tabletop.db') or not os.path.exists('db/gta.db') or no
     exit()
     
 bot = commands.Bot(command_prefix=data["command_prefix"], description=data["description"])
+# maybe usefull later:
+#bot.remove_command("help")
 
 ttsConn = sqlite3.connect('db/tabletop.db')
 quotesConn = sqlite3.connect('db/quotes.db')
@@ -298,7 +300,7 @@ async def gtavehicles(vehicle : str = ""):
         if vehicle == "":
             s += '| {:20s}| {:10s}|\n'.format(str(row[0]), str(row[1]))
         else:
-            s += 'Das Fahrzeug %s wurde %s mal verwendet.' % (vehicle, row[1])
+            s += 'Das Fahrzeug %s wurde %s mal verwendet.\n' % (row[0], row[1])
     s += '```'
     await bot.say(s)
   
@@ -379,5 +381,9 @@ async def updategta():
     except Exception as e:
         print(e)
 
+@bot.command(pass_context=True)
+async def friends(ctx):
+    user = discord.utils.get(ctx.message.server.members, name = 'Lefty')
+    await bot.say(":robot: My only friend is " + user.mention)
         
 bot.run(data["token"])
