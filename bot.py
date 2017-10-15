@@ -274,30 +274,68 @@ async def gtaracewins(player : str = None):
         await bot.say('```Spieler %s hat %s Rennen gewonnen```' % (player, row[0]))
   
 @bot.command()
-async def gtavehicles():
+async def gtavehicles(vehicle : str = ""):
     """ Returns top 7 used vehicles """
     s = "```"
-    s += "Die 7 meistverwendetsten Fahrzeuge:\n"
-    s += "| {:20s}| {:10s}|\n".format("Vehicle", "Anzahl")
-    s += ('-' * 35)
-    s += "\n"
+    if vehicle == "":
+        s += "Die 7 meistverwendetsten Fahrzeuge\n"
+        s += ('-' * 35)
+        s += "\n"
+        s += "| {:20s}| {:10s}|\n".format("Vehicle", "Anzahl")
+        s += ('-' * 35)
+        s += "\n"
+
     for row in gtaCur.execute("""Select vehicle, count(*) from (
                                     Select vehicle
                                     from raced
                                     where isdsq = 'False'
+                                        AND vehicle like '%"""+vehicle+"""%'
                                     group by raceid, vehicle
                                 )
                                 group by vehicle
                                 order by 2 desc
                                 limit 7"""):
+        if vehicle == "":
+            s += '| {:20s}| {:10s}|\n'.format(str(row[0]), str(row[1]))
+        else:
+            s += 'Das Fahrzeug %s wurde %s mal verwendet.' % (vehicle, row[1])
+    s += '```'
+    await bot.say(s)
+  
+@bot.command()
+async def gtaplaylistwins():
+    """ Returns a list of players who won a playlist """
+    s = "```"
+    s += "| {:20s}| {:10s}|\n".format("Spieler", "Siege")
+    s += ('-' * 35)
+    s += "\n"
+    for row in gtaCur.execute("""
+                    Select playername, count(*) as wins from
+                        ( Select * from
+                            ( Select playlistid, x.name as playlistname, player.name as playername, sum(points) as points from
+                                ( Select *,
+                                        CASE
+                                        WHEN isdsq = 'True' OR isdnf = 'True' THEN 0
+                                        WHEN rank = 1 THEN 15
+                                        WHEN rank = 2 THEN 12
+                                        WHEN rank = 3 THEN 10
+                                        WHEN rank BETWEEN 4 AND 10 THEN 12 - rank
+                                        ELSE 1
+                                        END as points from
+                                    playlist
+                                    join race on race.playlistid = playlist.rowid
+                                    join raced on raced.raceid = race.rowid
+                                ) as x
+                                join player on playerid = player.rowid
+                                    group by playlistid, x.name, playername
+                                    order by playlistid asc, points desc
+                            ) group by playlistid
+                              having max(points)
+                        ) group by playername
+                    order by wins desc"""):
         s += '| {:20s}| {:10s}|\n'.format(str(row[0]), str(row[1]))
     s += '```'
     await bot.say(s)
-
-  
-#@bot.command()
-#async def gtaplaylistwins(player : str):
-#    """ Returns the number of playlist wins of a player """
     
 @bot.command()
 async def updatetabletop():   
