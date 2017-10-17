@@ -1,6 +1,7 @@
 import httplib2
 import os
 import sqlite3
+from pathlib import Path
 
 from googleapiclient import discovery
 from oauth2client import client
@@ -36,13 +37,15 @@ class Tabletop:
 
         try:
             if self.delete == True:
-                try:
-                    print("removing db/tabletop.db")
-                    os.remove('db/tabletop.db')
-                    print("removed db/tabletop.db")
-                except OSError as e:
-                    print(e)
-                    raise Exception("can't remove file db/tabletop.db")
+                dbfile = Path("db/tabletop.db")
+                if dbfile.exists():
+                    try:
+                        print("removing db/tabletop.db")
+                        os.remove('db/tabletop.db')
+                        print("removed db/tabletop.db")
+                    except OSError as e:
+                        print(e)
+                        raise Exception("can't remove file db/tabletop.db")
 
             self.conn = sqlite3.connect('db/tabletop.db')
             self.cur = self.conn.cursor()

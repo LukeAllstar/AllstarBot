@@ -1,6 +1,7 @@
 import httplib2
 import os
 import sqlite3
+from pathlib import Path
 
 from googleapiclient import discovery
 from oauth2client import client
@@ -38,13 +39,15 @@ class Gtasheet:
 
         try:
             if self.delete == True:
-                try:
-                    print("removing db/gta.db")
-                    os.remove('db/gta.db')
-                    print("removed db/gta.db")
-                except OSError as e:
-                    print(e)
-                    raise Exception("can't remove file db/gta.db")
+                dbfile = Path("db/gta.db")
+                if dbfile.exists():
+                    try:
+                        print("removing db/gta.db")
+                        os.remove('db/gta.db')
+                        print("removed db/gta.db")
+                    except OSError as e:
+                        print(e)
+                        raise Exception("can't remove file db/gta.db")
                 
             self.conn = sqlite3.connect('db/gta.db')
             self.cur = self.conn.cursor()
