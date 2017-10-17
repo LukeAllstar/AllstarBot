@@ -7,13 +7,15 @@ import datetime
 import locale
 import sheets
 import os
+import setup
 
 with open('config.json') as json_data_file:
     data = json.load(json_data_file)
 
 if not os.path.exists('db/tabletop.db') or not os.path.exists('db/gta.db') or not os.path.exists('db/quotes.db'):
-    print("Databases do not exist. Please run setup.py first!")
-    exit()
+    print("Databases do not exist. Running setup!")
+    setup.setup()
+    #exit()
     
 bot = commands.Bot(command_prefix=data["command_prefix"], description=data["description"])
 # maybe usefull later:
