@@ -90,7 +90,7 @@ class Tabletop:
             flags = tools.argparser.parse_args(args=[])
         except ImportError:
             flags = None
-        
+
         home_dir = os.path.expanduser('~')
         credential_dir = os.path.join(home_dir, '.credentials')
         if not os.path.exists(credential_dir):
@@ -100,7 +100,21 @@ class Tabletop:
         store = Storage(credential_path)
         credentials = store.get()
         if not credentials or credentials.invalid:
-            flow = client.flow_from_clientsecrets(self.CLIENT_SECRET_FILE, self.SCOPES)
+            secret = Path(self.CLIENT_SECRET_FILE)
+            if secret.exists():
+                flow = client.flow_from_clientsecrets(self.CLIENT_SECRET_FILE, self.SCOPES)
+            else:
+                print("client_secret.json not found, using env vars")
+                if not os.environ.get('client_id') or not os.environ.get('client_secret'): 
+                    print("env vars client_id and client_secret not found. canceling")
+                    raise Exception("client secret error")
+                else:
+                    flow = OAuth2WebServerFlow(
+                        os.environ.get('client_id'),
+                        os.environ.get('client_secret'),
+                        self.SCOPES)    
+            
+            flow.params['access_type'] = 'offline'
             flow.user_agent = self.APPLICATION_NAME
             if flags:
                 credentials = tools.run_flow(flow, store, flags)
