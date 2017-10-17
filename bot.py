@@ -39,7 +39,10 @@ quotesCur = quotesConn.cursor()
 ttsCur = ttsConn.cursor()
 gtaCur = gtaConn.cursor()
 
-locale.setlocale(locale.LC_ALL, 'German_Germany')
+try:
+    locale.setlocale(locale.LC_ALL, 'German_Germany')
+except:
+    print("Couldn't set locale")
   
 @bot.event
 async def on_ready():
