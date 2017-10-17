@@ -394,7 +394,7 @@ async def updatetabletop():
         ttsCur.close()
         ttsConn.close()
         await bot.say("Updating Tabletop Database ...")
-        tts = sheets.Tabletop(True, True)
+        tts = sheets.Tabletop(True, True, False)
         tts.update_database()
         await bot.say("Update finished!")
     except Exception as e:
@@ -415,7 +415,7 @@ async def updategta():
         await bot.say("Updating Gta Database ...")
         gtaCur.close()
         gtaConn.close()
-        gta = sheets.Gtasheet(True, True)
+        gta = sheets.Gtasheet(True, True, False)
         gta.update_database()
         await bot.say("Update finished!")
     except Exception as e:

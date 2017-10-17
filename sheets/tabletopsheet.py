@@ -15,6 +15,7 @@ class Tabletop:
     games = {}
     delete = False
     create = False
+    noauth = False
     
     # If modifying these scopes, delete your previously saved credentials
     # at ~/.credentials/sheets.googleapis.com-python-quickstart.json
@@ -22,13 +23,15 @@ class Tabletop:
     CLIENT_SECRET_FILE = 'client_secret.json'
     APPLICATION_NAME = 'Allstar Bot Tabletop'
     
-    def __init__(self, delete, create):
+    def __init__(self, delete, create, noauth):
         self.delete = delete
         self.create = create
+        self.noauth = noauth
     
     def __init(self):
         self.delete = False
         self.create = False
+        self.noauth = False
    
     def inittabletop(self):
         if not os.path.exists('db'):
@@ -87,7 +90,10 @@ class Tabletop:
         try:
             import argparse
             #flags = argparse.ArgumentParser(parents=[tools.argparser]).parse_args()
-            flags = tools.argparser.parse_args(args=[])
+            if self.noauth == True:
+                flags = tools.argparser.parse_args(args=['--noauth_local_webserver'])
+            else:
+                flags = tools.argparser.parse_args(args=[])
         except ImportError:
             flags = None
 
@@ -293,5 +299,5 @@ class Tabletop:
     
 # just here for testing 
 #if __name__ == '__main__':
-#    tabletop = Tabletop(True, True) 
+#    tabletop = Tabletop(True, True, False) 
 #    tabletop.update_database()

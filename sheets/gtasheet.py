@@ -16,6 +16,7 @@ class Gtasheet:
     playernames = {}
     delete = False
     create = False
+    noauth = False
     
     # If modifying these scopes, delete your previously saved credentials
     # at ~/.credentials/sheets.googleapis.com-python-quickstart.json
@@ -23,13 +24,15 @@ class Gtasheet:
     CLIENT_SECRET_FILE = 'client_secret.json'
     APPLICATION_NAME = 'Allstar Bot Gta'
     
-    def __init__(self, delete, create):
+    def __init__(self, delete, create, noauth):
         self.delete = delete
         self.create = create
+        self.noauth = noauth
     
     def __init(self):
         self.delete = False
         self.create = False
+        self.noauth = False
         
     def initgta(self):
         print('initgta')
@@ -101,10 +104,13 @@ class Gtasheet:
         try:
             import argparse
             #flags = argparse.ArgumentParser(parents=[tools.argparser]).parse_args()
-            flags = tools.argparser.parse_args(args=[])
+            if self.noauth == True:
+                flags = tools.argparser.parse_args(args=['--noauth_local_webserver'])
+            else:
+                flags = tools.argparser.parse_args(args=[])
         except ImportError:
-            flags = None
-
+            flags = None       
+        
         home_dir = os.path.expanduser('~')
         credential_dir = os.path.join(home_dir, '.credentials')
         if not os.path.exists(credential_dir):
@@ -276,5 +282,5 @@ class Gtasheet:
  
 # just here for testing 
 if __name__ == '__main__':
-    gta = Gtasheet(True, True) 
+    gta = Gtasheet(True, True, False) 
     gta.update_database()

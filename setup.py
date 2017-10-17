@@ -9,7 +9,7 @@ def createGta(force : bool):
         print("db/gta.db already exists. Skipping")
     else:
         print("Creating db/gta.db ...")
-        gta = sheets.Gtasheet(True, True)
+        gta = sheets.Gtasheet(True, True, True)
         gta.update_database()
         print("... Finished")
 
@@ -19,7 +19,7 @@ def createTabletop(force : bool):
         print("db/tabletop.db already exists. Skipping")
     else:
         print("Creating db/tabletop.db ...")
-        tts = sheets.Tabletop(True, True)
+        tts = sheets.Tabletop(True, True, True)
         tts.update_database()
         print("... Finished")
         
