@@ -16,7 +16,17 @@ if not os.path.exists('db/tabletop.db') or not os.path.exists('db/gta.db') or no
     print("Databases do not exist. Running setup!")
     setup.setup()
     #exit()
-    
+
+def token():
+    '''Returns your token wherever it is'''
+    if data.get('token') == "<token>":
+        if not os.environ.get('TOKEN'):
+            print("Error retrieving token.")
+            exit()
+    else:
+        token = data.get('token').strip('\"')
+    return os.environ.get('TOKEN') or token
+        
 bot = commands.Bot(command_prefix=data["command_prefix"], description=data["description"])
 # maybe usefull later:
 #bot.remove_command("help")
@@ -424,4 +434,4 @@ async def friends(ctx):
     user = discord.utils.get(ctx.message.server.members, name = 'Lefty')
     await bot.say(":robot: My only friend is " + user.mention)
         
-bot.run(data["token"])
+bot.run(token())
