@@ -51,10 +51,30 @@ async def on_ready():
     print(bot.user.id)
     print('------')
 
+#@bot.command
+#async def help(category : str = ""):
+#    helptext = "```"
+#    category = category.lower()
+#    if category == "":
+#        helptext += "Bitte eine Kategorie angeben\n"
+#        helptext += "!help <Kategorie>"
+#        helptext += "Kategorien:"
+#        helptext += "   tts"
+#        helptext += "   gta"
+#        helptext += "   general"
+#    elif category == "tts":
+#        helptext += "
+#    elif category == "gta":
+#    elif category == "general":
+#    else:
+#        
+#    helptext += "```"
+    
 @bot.command(aliases=["ttssiegeimmonat", "tabletopwinsinmonth", "tabletopsiegeimmonat"])
 async def ttswinsinmonth(month : int = None, player : str = ""):
-    """ Returns all players who won a game in a certain month and the amount of wins
-        If player is given, return the wins in that month of that player"""
+    """Tabletop Siege eines Monats"""
+    #Returns all players who won a game in a certain month and the amount of wins
+    #If player is given, return the wins in that month of that player
     if month == None:
         await bot.say('```!ttswinsinmonth <month> [game]```')
     else:
@@ -81,7 +101,8 @@ async def ttswinsinmonth(month : int = None, player : str = ""):
 
 @bot.command(aliases = ["ttsspielervonspiel", "tabletopplayersofgame"])
 async def ttsplayersofgame(game : str = None):
-    """ Returns all players who played a certain game """
+    """Spieler die ein bestimmtes Tabletop Spiel bereits gespielt haben"""
+    #Returns all players who played a certain game
     if game == None:
         await bot.say('```!ttsplayersofgame <game>```')
     else:
@@ -104,8 +125,9 @@ async def ttsplayersofgame(game : str = None):
 
 @bot.command(aliases = ["ttssiegprozent", "tabletopwinpercent", "tabletopsiegprozent"])
 async def ttswinpercent(player : str = None, game : str = ""):
-    """ Returns the winpercent of a player. If game is given, it returns the winpercent for that game """
-    """ TODO: Maybe have "all" as playername for winpercent of all players? """
+    """Siegesrate eines Spielers"""
+    #Returns the winpercent of a player. If game is given, it returns the winpercent for that game
+    #TODO: Maybe have "all" as playername for winpercent of all players?
     if player == None:
         await bot.say('```!ttswinpercent <player> [game]```')
     else:
@@ -178,8 +200,9 @@ async def ttswinpercent(player : str = None, game : str = ""):
 
 @bot.command(aliases=["ttssiege", "ttsgewinne", "tabletopwins", "tabletopsiege", "tabletopgewinne"])
 async def ttswins(player : str = None, game : str = ""):
-    """ Returns how many wins a player has """
-    """ If game is given, returns the wins for that game """
+    """Tabletop Siege eines Spielers"""
+    #Returns how many wins a player has
+    #If game is given, returns the wins for that game
     if player == None:
         await bot.say('```!ttswins <player> [game]```')
     else:
@@ -244,8 +267,9 @@ async def ttswins(player : str = None, game : str = ""):
 
 @bot.command(aliases=["zitat"])
 async def quote(name : str = ""):
-    """ Selects a random quote from the database.
-    If a name parameter is given it searches for a quote from that person"""
+    """Zitat eines Communitymitglieds"""
+    #Selects a random quote from the database.
+    #If a name parameter is given it searches for a quote from that person
     quotesCur.execute("""SELECT quote, name from quotes 
                             WHERE ROWID IN
                                 (Select ROWID from quotes
@@ -259,7 +283,8 @@ async def quote(name : str = ""):
 
 @bot.command(pass_context=True, aliases=["addzitat"])
 async def addquote(ctx, quote : str = None, name : str = None):
-    """ Adds one quote to the database. Adds the person who issued the command to the table """
+    """Neues Zitat erstellen"""
+    # Adds one quote to the database. Adds the person who issued the command to the table
     if quote == None or name == None:
         await bot.say('```!addquote "<quote>" "<name>"```')
     else:
@@ -267,18 +292,19 @@ async def addquote(ctx, quote : str = None, name : str = None):
         quotesConn.commit()
         await bot.say("Zitat hinzugefuegt")
 
-@bot.command(pass_context=True)
-async def test(ctx):
-    """ Testing some permission stuff """
-    await bot.say("author: " + str(ctx.message.author))
-    #for role in ctx.message.author.roles:
-    #    await bot.say("rolle: " + str(role.name))
-    await bot.say("ist admin: " + str(ctx.message.author.server_permissions.administrator))
+#@bot.command(pass_context=True)
+#async def test(ctx):
+#    """ Testing some permission stuff """
+#    await bot.say("author: " + str(ctx.message.author))
+#    #for role in ctx.message.author.roles:
+#    #    await bot.say("rolle: " + str(role.name))
+#    await bot.say("ist admin: " + str(ctx.message.author.server_permissions.administrator))
 
     
 @bot.command()
 async def gtaracewins(player : str = None):
-    """ Returns the number of race wins of a player """
+    """Anzahl der Siege eines Spielers"""
+    #Returns the number of race wins of a player
     if player == None:
         await bot.say('```!gtaracewins <player>```')
     else:
@@ -292,7 +318,8 @@ async def gtaracewins(player : str = None):
   
 @bot.command()
 async def gtavehicles(vehicle : str = ""):
-    """ Returns top 7 used vehicles """
+    """Meistverwendesten Fahrzeuge"""
+    #Returns top 7 used vehicles
     s = "```"
     if vehicle == "":
         s += "Die 7 meistverwendetsten Fahrzeuge\n"
@@ -321,7 +348,8 @@ async def gtavehicles(vehicle : str = ""):
   
 @bot.command()
 async def gtaplaylistwins():
-    """ Returns a list of players who won a playlist """
+    """Playlist Siege"""
+    # Returns a list of players who won a playlist
     s = "```"
     s += "| {:20s}| {:10s}|\n".format("Spieler", "Siege")
     s += ('-' * 35)
@@ -356,6 +384,8 @@ async def gtaplaylistwins():
    
 @bot.command()
 async def gtaplaylist(playlist : str = ""):
+    """Ergebnisse einer bestimmten Playliste"""
+    
     if playlist == "":
         await bot.say("```!gtaplaylist <playlist>```")
     else:
@@ -390,7 +420,8 @@ async def gtaplaylist(playlist : str = ""):
         await bot.say(s)
         
 @bot.command()
-async def updatetabletop():   
+async def updatetabletop():
+    """Updatet die Tabletop Datenbank"""
     try:
         global ttsCur
         global ttsConn
@@ -412,6 +443,7 @@ async def updatetabletop():
 
 @bot.command()
 async def updategta():
+    """Updatet die GTA Datenbank"""
     try:
         global gtaCur
         global gtaConn
@@ -434,6 +466,7 @@ async def updategta():
 
 @bot.command(pass_context=True)
 async def friends(ctx):
+    """Freunde!"""
     user = discord.utils.get(ctx.message.server.members, name = 'Lefty')
     await bot.say(":robot: My only friend is " + user.mention)
         
