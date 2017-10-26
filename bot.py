@@ -8,6 +8,7 @@ import locale
 import sheets
 import os
 import setup
+import strawpoll
 
 with open('config.json') as json_data_file:
     data = json.load(json_data_file)
@@ -463,7 +464,24 @@ async def updategta():
     except Exception as e:
         print(e)
 
-
+@bot.command(pass_context=True)
+async def rammerdestages(ctx, chan:str = "GTA"):
+    now = datetime.datetime.now()
+    api = strawpoll.API()
+    options = []
+    for channel in ctx.message.server.channels:
+        if chan in channel.name: 
+            for member in channel.voice_members:
+                options.append(str(member).split("#")[0])
+    if len(options) >= 2:
+        poll = strawpoll.Poll("Rammer des Tages " + now.strftime("%Y-%m-%d"), options)
+        poll.multi = True
+        poll = await api.submit_poll(poll)
+        await bot.say("Jetzt Abstimmen für den Rammer des Tages!")
+        await bot.say(poll.url)
+    else:
+        await bot.say("Konnte die Umfrage nicht anlegen. Zu wenige Leute im Channel " + chan)
+        
 @bot.command(pass_context=True)
 async def friends(ctx):
     """Freunde!"""
