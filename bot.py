@@ -474,6 +474,7 @@ async def rammerdestages(ctx, chan:str = "GTA"):
             for member in channel.voice_members:
                 options.append(str(member).split("#")[0])
     if len(options) >= 2:
+        options.append("Alle sind fair gefahren")
         poll = strawpoll.Poll("Rammer des Tages " + now.strftime("%Y-%m-%d"), options)
         poll.multi = True
         poll = await api.submit_poll(poll)
