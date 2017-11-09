@@ -465,10 +465,15 @@ async def updategta():
         print(e)
 
 @bot.command(pass_context=True)
-async def rammerdestages(ctx, chan:str = "GTA"):
+async def rammerdestages(ctx, chan:str = "GTA", extraOptions:str = ""):
     now = datetime.datetime.now()
     api = strawpoll.API()
     options = []
+    
+    if "," in extraOptions:
+        for o in extraOptions.split(","):
+            options.append(o)
+    
     for channel in ctx.message.server.channels:
         if chan in channel.name: 
             for member in channel.voice_members:
