@@ -218,7 +218,7 @@ class Gtasheet:
     def insertPlaylist(self, name, date):
         print("Inserting %s at date %s" % (name, date))
         self.cur.execute("""INSERT INTO playlist(name, date)
-                            VALUES('"""+name+"""', strftime('%d.%m.%Y','"""+date+"""'))""")
+                            VALUES('"""+name+"""', strftime('%d.%m.%Y','"""+str(date)+"""'))""")
     
 
     def checkPlayer(self, playername):
