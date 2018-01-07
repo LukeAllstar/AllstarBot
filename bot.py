@@ -483,6 +483,7 @@ async def rammerdestages(ctx, chan:str = "GTA", extraOptions:str = ""):
         poll = strawpoll.Poll("Rammer des Tages " + now.strftime("%Y-%m-%d"), options)
         poll.multi = True
         poll = await api.submit_poll(poll)
+        await bot.upload("media/RammerDesTages.png")
         await bot.say("Jetzt Abstimmen für den Rammer des Tages!")
         await bot.say(poll.url)
     else:
