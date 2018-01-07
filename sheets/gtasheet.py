@@ -179,12 +179,12 @@ class Gtasheet:
                                   discoveryServiceUrl=discoveryUrl)
 
         spreadsheetId = '1Avxh9i3ObSn7rf8iA75JBwdmdWRis7FS8WezsO9E6sE'
-        rangeName = 'Statistiken (Details) #2017!A2:M'
+        rangeName = 'Statistiken (Details) #2017!A1:M'
         result = service.spreadsheets().values().get(
             spreadsheetId=spreadsheetId, range=rangeName, valueRenderOption='FORMULA').execute()
         values = result.get('values', [])
         
-        rangeName = 'Statistiken (Details) #2018!A2:M'
+        rangeName = 'Statistiken (Details) #2018!A1:M'
         result = service.spreadsheets().values().get(
             spreadsheetId=spreadsheetId, range=rangeName, valueRenderOption='FORMULA').execute()
         values += result.get('values', [])
