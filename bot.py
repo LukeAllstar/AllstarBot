@@ -421,15 +421,15 @@ async def gtaplaylist(playlist : str = ""):
         await bot.say(s)
         
 @bot.command()
-async def updatetabletop():
+async def updatetabletop(create : bool = False):
     """Updatet die Tabletop Datenbank"""
     try:
         global ttsCur
         global ttsConn
-        ttsCur.close()
-        ttsConn.close()
         await bot.say("Updating Tabletop Database ...")
-        tts = sheets.Tabletop(True, True, False)
+        #ttsCur.close()
+        #ttsConn.close()
+        tts = sheets.Tabletop(False, create, True, ttsCur)
         tts.update_database()
         await bot.say("Update finished!")
     except Exception as e:
@@ -443,15 +443,15 @@ async def updatetabletop():
         print(e)
 
 @bot.command()
-async def updategta():
+async def updategta(delete : bool = False, create : bool = False):
     """Updatet die GTA Datenbank"""
     try:
         global gtaCur
         global gtaConn
         await bot.say("Updating Gta Database ...")
-        gtaCur.close()
-        gtaConn.close()
-        gta = sheets.Gtasheet(True, True, False)
+        #gtaCur.close()
+        #gtaConn.close()
+        gta = sheets.Gtasheet(delete, create, True, gtaConn)
         gta.update_database()
         await bot.say("Update finished!")
     except Exception as e:

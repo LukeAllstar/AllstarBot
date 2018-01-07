@@ -17,6 +17,7 @@ class Gtasheet:
     delete = False
     create = False
     noauth = False
+    closeConn = False
     
     # If modifying these scopes, delete your previously saved credentials
     # at ~/.credentials/sheets.googleapis.com-python-quickstart.json
@@ -24,15 +25,23 @@ class Gtasheet:
     CLIENT_SECRET_FILE = 'client_secret.json'
     APPLICATION_NAME = 'Allstar Bot Gta'
     
-    def __init__(self, delete, create, noauth):
+    def __init__(self, delete, create, noauth, conn):
         self.delete = delete
         self.create = create
         self.noauth = noauth
+        self.conn = conn
+        self.playernames = {}
+    
+    #def __init__(self, delete, create, noauth):
+    #    self.delete = delete
+    #    self.create = create
+    #    self.noauth = noauth
     
     def __init(self):
         self.delete = False
         self.create = False
         self.noauth = False
+        self.playernames = {}
         
     def initgta(self):
         print('initgta')
@@ -53,8 +62,11 @@ class Gtasheet:
                     except OSError as e:
                         print(e)
                         raise Exception("can't remove file db/gta.db")
+            
+            if self.conn == None:
+                self.conn = sqlite3.connect('db/gta.db')
+                self.closeConn = True
                 
-            self.conn = sqlite3.connect('db/gta.db')
             self.cur = self.conn.cursor()
                     
             if self.create == True:
@@ -84,6 +96,12 @@ class Gtasheet:
                             isdsq INT,
                             FOREIGN KEY(raceid) REFERENCES race(rowid),
                             FOREIGN KEY(playerid) REFERENCES player(ROWID))''')
+                self.conn.commit()
+            else:
+                self.cur.execute('''Delete from raced''')
+                self.cur.execute('''Delete from race''')
+                self.cur.execute('''Delete from playlist''')
+                self.cur.execute('''Delete from player''')
                 self.conn.commit()
                 
         except Exception as e:
@@ -166,6 +184,11 @@ class Gtasheet:
             spreadsheetId=spreadsheetId, range=rangeName, valueRenderOption='FORMULA').execute()
         values = result.get('values', [])
         
+        rangeName = 'Statistiken (Details) #2018!A2:M'
+        result = service.spreadsheets().values().get(
+            spreadsheetId=spreadsheetId, range=rangeName, valueRenderOption='FORMULA').execute()
+        values += result.get('values', [])
+        
         players = [None] * 7
         points = [None] * 7
         game = ''
@@ -216,7 +239,7 @@ class Gtasheet:
         self.end()
 
     def insertPlaylist(self, name, date):
-        print("Inserting %s at date %s" % (name, date))
+        #print("Inserting %s at date %s" % (name, date))
         self.cur.execute("""INSERT INTO playlist(name, date)
                             VALUES('"""+name+"""', strftime('%d.%m.%Y','"""+str(date)+"""'))""")
     
@@ -258,8 +281,8 @@ class Gtasheet:
             vehicle = ""
             
         playerid = self.playernames[player]
-        print("Inserting player %s, raceid %s, bestlap %s, racetime %s, vehicle %s, rank %s, money %s, isdnf %s, isdsq %s"
-                % (playerid, raceid, bestlap, racetime, vehicle, rank, money, isdnf, isDisqualified))
+        #print("Inserting player %s, raceid %s, bestlap %s, racetime %s, vehicle %s, rank %s, money %s, isdnf %s, isdsq %s"
+        #        % (playerid, raceid, bestlap, racetime, vehicle, rank, money, isdnf, isDisqualified))
 
         self.cur.execute("""INSERT INTO raced(playerid, raceid, bestlap, racetime, vehicle, rank, money, isdnf, isdsq)
                         VALUES("%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s")"""
@@ -277,8 +300,9 @@ class Gtasheet:
         return rows[0]
         
     def end(self):
-        self.cur.close()
-        self.conn.close()
+        if self.closeConn == True:
+            #self.cur.close()
+            self.conn.close()
  
 # just here for testing 
 if __name__ == '__main__':

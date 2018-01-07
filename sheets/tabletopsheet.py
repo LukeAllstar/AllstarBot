@@ -27,11 +27,15 @@ class Tabletop:
         self.delete = delete
         self.create = create
         self.noauth = noauth
+        self.playernames = {}
+        self.games = {}
     
     def __init(self):
         self.delete = False
         self.create = False
         self.noauth = False
+        self.playernames = {}
+        self.games = {}
    
     def inittabletop(self):
         if not os.path.exists('db'):
