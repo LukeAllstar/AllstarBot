@@ -473,6 +473,8 @@ async def rammerdestages(ctx, chan:str = "GTA", extraOptions:str = ""):
     if "," in extraOptions:
         for o in extraOptions.split(","):
             options.append(o)
+    elif extraOptions != "":
+        options.append(extraOptions)
     
     for channel in ctx.message.server.channels:
         if chan in channel.name: 
