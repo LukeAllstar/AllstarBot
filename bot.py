@@ -480,14 +480,17 @@ async def rammerdestages(ctx, chan:str = "GTA", extraOptions:str = ""):
         if chan in channel.name: 
             for member in channel.voice_members:
                 options.append(str(member).split("#")[0])
-    if len(options) >= 2:
-        options.append("Alle sind fair gefahren")
+    if len(options) >= 2:  
+        options.append("Alle sind fair gefahren ☺")
         poll = strawpoll.Poll("Rammer des Tages " + now.strftime("%Y-%m-%d"), options)
         poll.multi = True
         poll = await api.submit_poll(poll)
         await bot.upload("media/RammerDesTages.png")
-        await bot.say("Jetzt Abstimmen für den Rammer des Tages!")
+        #await bot.say("Jetzt Abstimmen für den Rammer des Tages!")
         await bot.say(poll.url)
+        # log poll url into a file
+        with open("polls.txt", "a") as pollfile:
+            pollfile.write(poll.url)
     else:
         await bot.say("Konnte die Umfrage nicht anlegen. Zu wenige Leute im Channel " + chan)
         
