@@ -45,11 +45,29 @@ def createQuotes(force : bool):
         #    print("Table quotes already exists.")
         print("... Finished")
 
+def createGifs(force : bool):
+    ### Gifs ###   
+    if force == False and os.path.exists('db/gifs.db'):
+        print("db/gifs.db already exists. Skipping")
+    else:
+        try:
+            print("removing db/gifs.db")
+            os.remove('db/gifs.db')
+            print("removed db/gifs.db")
+        except OSError:
+            pass
+        print("Creating db/gifs.db ...")
+        quotesConn = sqlite3.connect('db/gifs.db')
+        quotesCur = quotesConn.cursor()
+        quotesCur.execute('''CREATE TABLE gifs(url, game, comment, addedBy, addedOn)''')
+        quotesConn.commit()
+        print("... Finished")
+        
 def setup():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--force", help="tts, gta or quotes, commaseperated")
+    parser.add_argument("--force", help="tts, gta, quotes or gifs. comma seperated")
     parser.add_argument("--noauth_local_webserver", action="store_true")
-    #example: python setup.py --force gta,tabletop
+    #example: python3 setup.py --force gta,tabletop
     args = parser.parse_args()
     forceArgs = None
 
@@ -82,6 +100,13 @@ def setup():
         createQuotes(True)
     else:
         createQuotes(False)
+        
+    ### Gifs ###
+    if forceArgs != None and ("gif" in forceArgs or "gifs" in forceArgs):
+        print("forcing gifs")
+        createGifs(True)
+    else:
+        createGifs(False)
 
 if __name__ == '__main__':
     setup()

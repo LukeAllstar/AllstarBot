@@ -9,14 +9,14 @@ import sheets
 import os
 import setup
 import strawpoll
+import asyncio
 
 with open('config.json') as json_data_file:
     data = json.load(json_data_file)
 
-if not os.path.exists('db/tabletop.db') or not os.path.exists('db/gta.db') or not os.path.exists('db/quotes.db'):
+if not os.path.exists('db/tabletop.db') or not os.path.exists('db/gta.db') or not os.path.exists('db/quotes.db') or not os.path.exists('db/gifs.db'):
     print("Databases do not exist. Running setup!")
     setup.setup()
-    #exit()
 
 def token():
     '''Returns your token wherever it is'''
@@ -34,10 +34,12 @@ bot = commands.Bot(command_prefix=data["command_prefix"], description=data["desc
 
 ttsConn = sqlite3.connect('db/tabletop.db')
 quotesConn = sqlite3.connect('db/quotes.db')
+gifsConn = sqlite3.connect('db/gifs.db')
 gtaConn = sqlite3.connect('db/gta.db')
 
-quotesCur = quotesConn.cursor()
 ttsCur = ttsConn.cursor()
+quotesCur = quotesConn.cursor()
+gifsCur = gifsConn.cursor()
 gtaCur = gtaConn.cursor()
 
 try:
@@ -500,4 +502,53 @@ async def friends(ctx):
     user = discord.utils.get(ctx.message.server.members, name = 'Lefty')
     await bot.say(":robot: My only friend is " + user.mention)
         
+@bot.command(pass_context=True, aliases=["addGif", "addgyf", "addGyf"])
+async def addgif(ctx, url, game : str = "", comment : str = ""):
+    """Adds a gif to the database"""
+    if url == None:
+        await bot.say('```!addGif "<url>" "<game>" "<comment>"```')
+    else:
+        gifsCur.execute("""INSERT INTO gifs (url, game, comment, addedBy, addedOn) VALUES ('%s', '%s', '%s', '%s', current_timestamp)""" % (url, game, comment, ctx.message.author))
+        gifsConn.commit()
+        message = await bot.say("Gif hinzugefuegt")
+        await asyncio.sleep(4)
+        await bot.delete_message(message)
+
+@bot.command(aliases=["showgif", "gyf"])
+async def gif(search : str = ""):
+    """Zeigt ein Gif aus der Datenbank an"""
+    # Search for addedBy first
+    print("search: '%s'" % search)
+    gifsCur.execute("""SELECT url, game, comment, addedBy from gifs
+                            WHERE ROWID IN
+                                (Select ROWID from gifs
+                                    where LOWER(addedBy) like '%"""+search.lower()+"""%' 
+                                    ORDER BY RANDOM() LIMIT 1)""")
+    row = gifsCur.fetchone()
+    
+    if(row == None):
+        # Search for game and comment second
+        gifsCur.execute("""SELECT url, game, comment, addedBy from gifs
+                            WHERE ROWID IN
+                                (Select ROWID from gifs
+                                    where LOWER(game) like '%"""+search.lower()+"""%' OR
+                                            LOWER(comment) like '%""" + search.lower() + """%' 
+                                    ORDER BY RANDOM() LIMIT 1)""")
+        row = gifsCur.fetchone()
+    
+    if(row != None):
+        outStr = '```'
+        if(row[2] != ""):
+            outStr += "'%s'\n" % row[2]
+        if(row[1] != ""):
+            outStr += "Spiel: " + row[1] + "\n" 
+        if(row[3] != ""):
+            title = ['Dr. ', 'Meister ', 'Sir ', 'Mr. ', '', '', '', '', '', '', '']
+            outStr += "Von " + random.choice(title) + row[3].split("#")[0]
+        outStr += '```'
+        await bot.say(outStr)
+        await bot.say(row[0])
+    else:
+        await bot.say("Kein Gif zu '%s' gefunden.\nStattdessen gibt es :cake:." % search)        
+
 bot.run(token())
