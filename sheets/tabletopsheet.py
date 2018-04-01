@@ -16,6 +16,7 @@ class Tabletop:
     delete = False
     create = False
     noauth = False
+    closeConn = False
     
     # If modifying these scopes, delete your previously saved credentials
     # at ~/.credentials/sheets.googleapis.com-python-quickstart.json
@@ -23,10 +24,11 @@ class Tabletop:
     CLIENT_SECRET_FILE = 'client_secret.json'
     APPLICATION_NAME = 'Allstar Bot Tabletop'
     
-    def __init__(self, delete, create, noauth):
+    def __init__(self, delete, create, noauth, conn):
         self.delete = delete
         self.create = create
         self.noauth = noauth
+        self.conn = conn
         self.playernames = {}
         self.games = {}
     
@@ -54,7 +56,10 @@ class Tabletop:
                         print(e)
                         raise Exception("can't remove file db/tabletop.db")
 
-            self.conn = sqlite3.connect('db/tabletop.db')
+            if self.conn == None:
+                self.conn = sqlite3.connect('db/tabletop.db')
+                self.closeConn = True
+                
             self.cur = self.conn.cursor()
             
             if self.create == True:
@@ -298,8 +303,9 @@ class Tabletop:
         return rows[0][0] + 1
         
     def end(self):
-        self.cur.close()
-        self.conn.close()
+        if self.closeConn == True:
+            #self.cur.close()
+            self.conn.close()
     
 # just here for testing 
 #if __name__ == '__main__':

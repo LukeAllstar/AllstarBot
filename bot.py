@@ -81,7 +81,7 @@ async def ttswinsinmonth(month : int = None, player : str = ""):
     if month == None:
         await bot.say('```!ttswinsinmonth <month> [game]```')
     else:
-        s = '```'
+        s = '```ml\n'
         if player != "":
             s += "Gewinne fuer Spieler '" + player + "'"
         else:
@@ -311,24 +311,24 @@ async def gtaracewins(player : str = None):
     if player == None:
         await bot.say('```!gtaracewins <player>```')
     else:
-        gtaCur.execute("""Select COALESCE(count(*),0)
+        gtaCur.execute("""Select COALESCE(count(*),0), player.name
                             from raced
                             join player on player.rowid = raced.playerid
                             where rank = 1 AND
                                 LOWER(player.name) like '%""" + player + """%'""")
         row = gtaCur.fetchone()
-        await bot.say('```Spieler %s hat %s Rennen gewonnen```' % (player, row[0]))
+        await bot.say('```cs\nSpieler "%s" hat %s Rennen gewonnen.```' % (row[1], row[0]))
   
 @bot.command()
 async def gtavehicles(vehicle : str = ""):
     """Meistverwendesten Fahrzeuge"""
     #Returns top 7 used vehicles
-    s = "```"
+    s = "```ml\n"
     if vehicle == "":
         s += "Die 7 meistverwendetsten Fahrzeuge\n"
         s += ('-' * 35)
         s += "\n"
-        s += "| {:20s}| {:10s}|\n".format("Vehicle", "Anzahl")
+        s += "| {:20s}| {:10s}|\n".format("Fahrzeug", "Anzahl")
         s += ('-' * 35)
         s += "\n"
 
@@ -345,7 +345,7 @@ async def gtavehicles(vehicle : str = ""):
         if vehicle == "":
             s += '| {:20s}| {:10s}|\n'.format(str(row[0]), str(row[1]))
         else:
-            s += 'Das Fahrzeug %s wurde %s mal verwendet.\n' % (row[0], row[1])
+            s += 'Das Fahrzeug "%s" wurde %s mal verwendet.\n' % (row[0], row[1])
     s += '```'
     await bot.say(s)
   
@@ -353,9 +353,9 @@ async def gtavehicles(vehicle : str = ""):
 async def gtaplaylistwins():
     """Playlist Siege"""
     # Returns a list of players who won a playlist
-    s = "```"
-    s += "| {:20s}| {:10s}|\n".format("Spieler", "Siege")
-    s += ('-' * 35)
+    s = "```ml\n"
+    s += "| {:20s}| {:8s}|\n".format("Spieler", "Siege")
+    s += ('-' * 33)
     s += "\n"
     for row in gtaCur.execute("""
                     Select playername, count(*) as wins from
@@ -381,7 +381,7 @@ async def gtaplaylistwins():
                               having max(points)
                         ) group by playername
                     order by wins desc"""):
-        s += '| {:20s}| {:10s}|\n'.format(str(row[0]), str(row[1]))
+        s += '| {:20s}| {:8s}|\n'.format(str(row[0]), str(row[1]))
     s += '```'
     await bot.say(s)
    
@@ -392,9 +392,9 @@ async def gtaplaylist(playlist : str = ""):
     if playlist == "":
         await bot.say("```!gtaplaylist <playlist>```")
     else:
-        s = "```"
-        s += "Ergebnis fuer Playlist %s\n" % playlist
-        s += "|{:6}| {:20s}| {:6s}|\n".format("Rang","Spieler", "Punkte")
+        s = "```ml\n"
+        s += "Ergebnis Playlist %s\n\n" % playlist
+        s += "| {:5}| {:20s}| {:6s}|\n".format("Rang","Spieler", "Punkte")
         s += ('-' * 38)
         s += "\n"
         rank = 1
@@ -417,13 +417,13 @@ async def gtaplaylist(playlist : str = ""):
                             join player on playerid = player.rowid
                             group by player.name
                                 order by points desc"""):
-            s += "|{:6}| {:20s}| {:6s}|\n".format(str(rank),str(row[0]), str(row[1]))
+            s += "| {:5}| {:20s}| {:6s}|\n".format(str(rank),str(row[0]), str(row[1]))
             rank += 1
         s += "```"
         await bot.say(s)
         
 @bot.command()
-async def updatetabletop(create : bool = False):
+async def updatetabletop(delete : bool = False, create : bool = False):
     """Updatet die Tabletop Datenbank"""
     try:
         global ttsCur
@@ -431,7 +431,7 @@ async def updatetabletop(create : bool = False):
         await bot.say("Updating Tabletop Database ...")
         #ttsCur.close()
         #ttsConn.close()
-        tts = sheets.Tabletop(False, create, True, ttsCur)
+        tts = sheets.Tabletop(delete, create, True, ttsConn)
         tts.update_database()
         await bot.say("Update finished!")
     except Exception as e:
@@ -517,15 +517,17 @@ async def addgif(ctx, url, game : str = "", comment : str = ""):
 @bot.command(aliases=["showgif", "gyf"])
 async def gif(search : str = ""):
     """Zeigt ein Gif aus der Datenbank an"""
-    # Search for addedBy first
-    print("search: '%s'" % search)
+    # Search for addedBy, game and comment
     gifsCur.execute("""SELECT url, game, comment, addedBy from gifs
                             WHERE ROWID IN
                                 (Select ROWID from gifs
                                     where LOWER(addedBy) like '%"""+search.lower()+"""%' 
+                                    where LOWER(game) like '%"""+search.lower()+"""%' OR
+                                    LOWER(comment) like '%""" + search.lower() + """%' 
                                     ORDER BY RANDOM() LIMIT 1)""")
     row = gifsCur.fetchone()
     
+    '''
     if(row == None):
         # Search for game and comment second
         gifsCur.execute("""SELECT url, game, comment, addedBy from gifs
@@ -535,9 +537,10 @@ async def gif(search : str = ""):
                                             LOWER(comment) like '%""" + search.lower() + """%' 
                                     ORDER BY RANDOM() LIMIT 1)""")
         row = gifsCur.fetchone()
+    '''
     
     if(row != None):
-        outStr = '```'
+        outStr = '```ml\n'
         if(row[2] != ""):
             outStr += "'%s'\n" % row[2]
         if(row[1] != ""):
