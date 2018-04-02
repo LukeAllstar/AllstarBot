@@ -57,10 +57,11 @@ def createGifs(force : bool):
         except OSError:
             pass
         print("Creating db/gifs.db ...")
-        quotesConn = sqlite3.connect('db/gifs.db')
-        quotesCur = quotesConn.cursor()
-        quotesCur.execute('''CREATE TABLE gifs(url, game, comment, addedBy, addedOn)''')
-        quotesConn.commit()
+        gifConn = sqlite3.connect('db/gifs.db')
+        gifCur = gifConn.cursor()
+        gifCur.execute('''CREATE TABLE gifs(url, game, comment, addedBy, addedOn)''')
+        gifCur.execute('''CREATE TABLE comboGifs(id1, id2)''')
+        gifConn.commit()
         print("... Finished")
         
 def setup():

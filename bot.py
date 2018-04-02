@@ -493,6 +493,7 @@ async def rammerdestages(ctx, chan:str = "GTA", extraOptions:str = ""):
         # log poll url into a file
         with open("polls.txt", "a") as pollfile:
             pollfile.write(poll.url)
+            pollfile.write("\n")
     else:
         await bot.say("Konnte die Umfrage nicht anlegen. Zu wenige Leute im Channel " + chan)
         
@@ -503,27 +504,36 @@ async def friends(ctx):
     await bot.say(":robot: My only friend is " + user.mention)
         
 @bot.command(pass_context=True, aliases=["addGif", "addgyf", "addGyf"])
-async def addgif(ctx, url, game : str = "", comment : str = ""):
+async def addgif(ctx, url, game : str = "", comment : str = "", id : int = None):
     """Adds a gif to the database"""
     if url == None:
         await bot.say('```!addGif "<url>" "<game>" "<comment>"```')
     else:
         gifsCur.execute("""INSERT INTO gifs (url, game, comment, addedBy, addedOn) VALUES ('%s', '%s', '%s', '%s', current_timestamp)""" % (url, game, comment, ctx.message.author))
+        if id != None:
+            lastid = gifsCur.lastrowid
+            gifsCur.execute("""Select ROWID from gifs where ROWID = %s""" % (id))
+            row = gifsCur.fetchone()
+            if row != None:
+                gifsCur.execute("""INSERT INTO comboGifs (id1, id2) VALUES (%d, %d)""" % (lastid, id))
+            else:
+                await bot.say("Konnte kein Gif mit der id %d finden. Gif wurde **nicht** hinzugefügt!" % id)
+                return
         gifsConn.commit()
         message = await bot.say("Gif hinzugefuegt")
         await asyncio.sleep(4)
         await bot.delete_message(message)
 
-@bot.command(aliases=["showgif", "gyf"])
+@bot.command(aliases=["gifs", "showgif", "gyf"])
 async def gif(search : str = ""):
     """Zeigt ein Gif aus der Datenbank an"""
     # Search for addedBy, game and comment
-    gifsCur.execute("""SELECT url, game, comment, addedBy from gifs
+    gifsCur.execute("""SELECT url, game, comment, addedBy, ROWID from gifs
                             WHERE ROWID IN
                                 (Select ROWID from gifs
-                                    where LOWER(addedBy) like '%"""+search.lower()+"""%' 
-                                    where LOWER(game) like '%"""+search.lower()+"""%' OR
-                                    LOWER(comment) like '%""" + search.lower() + """%' 
+                                    where LOWER(addedBy) like '%"""+search.lower()+"""%' OR 
+                                        LOWER(game) like '%"""+search.lower()+"""%' OR
+                                        LOWER(comment) like '%""" + search.lower() + """%' 
                                     ORDER BY RANDOM() LIMIT 1)""")
     row = gifsCur.fetchone()
     
@@ -542,15 +552,37 @@ async def gif(search : str = ""):
     if(row != None):
         outStr = '```ml\n'
         if(row[2] != ""):
-            outStr += "'%s'\n" % row[2]
+            outStr += '#%d: "%s"\n' % (row[4], row[2])
         if(row[1] != ""):
             outStr += "Spiel: " + row[1] + "\n" 
         if(row[3] != ""):
             title = ['Dr. ', 'Meister ', 'Sir ', 'Mr. ', '', '', '', '', '', '', '']
             outStr += "Von " + random.choice(title) + row[3].split("#")[0]
         outStr += '```'
+        
         await bot.say(outStr)
         await bot.say(row[0])
+        
+        # search for combo gifs
+        id = row[4]
+        for comboRow in gifsCur.execute("""Select id1, id2 from comboGifs
+                        where id2 = %s
+                            OR id1 = %s""" % (id, id)):
+            if comboRow[0] == id:
+                comboId = comboRow[1]
+            else:
+                comboId = comboRow[0]
+            gifsCur2 = gifsConn.cursor()
+            gifsCur2.execute("""Select url, comment, addedBy from gifs WHERE ROWID = %s """ % comboId)
+            comboGif = gifsCur2.fetchone()
+            if comboGif != None:
+                gifStr = '```ml\n'
+                gifStr += 'Das ist ein Combo Gif!\n'
+                gifStr += '#%d: %s' % (comboId, comboGif[1])
+                gifStr += '```'
+                await bot.say(gifStr)
+                await bot.say(comboGif[0])
+
     else:
         await bot.say("Kein Gif zu '%s' gefunden.\nStattdessen gibt es :cake:." % search)        
 
