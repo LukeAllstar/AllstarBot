@@ -398,6 +398,7 @@ async def gtaplaylist(playlist : str = ""):
         s += ('-' * 38)
         s += "\n"
         rank = 1
+        prevPoints = -1
         for row in gtaCur.execute("""
                         Select player.name, sum(points) as points from (
                             Select *,
@@ -417,7 +418,12 @@ async def gtaplaylist(playlist : str = ""):
                             join player on playerid = player.rowid
                             group by player.name
                                 order by points desc"""):
-            s += "| {:5}| {:20s}| {:6s}|\n".format(str(rank),str(row[0]), str(row[1]))
+            if prevPoints == row[1]:
+                rankMod += 1
+            else:
+                rankMod = 0
+            s += "| {:5}| {:20s}| {:6s}|\n".format(str(rank-rankMod),str(row[0]), str(row[1]))
+            prevPoints = row[1]
             rank += 1
         s += "```"
         await bot.say(s)
