@@ -516,8 +516,8 @@ async def addgif(ctx, url, game : str = "", comment : str = "", id : int = None)
         await bot.say('```!addGif "<url>" "<game>" "<comment>"```')
     else:
         gifsCur.execute("""INSERT INTO gifs (url, game, comment, addedBy, addedOn) VALUES ('%s', '%s', '%s', '%s', current_timestamp)""" % (url, game, comment, ctx.message.author))
+        lastid = gifsCur.lastrowid
         if id != None:
-            lastid = gifsCur.lastrowid
             gifsCur.execute("""Select ROWID from gifs where ROWID = %s""" % (id))
             row = gifsCur.fetchone()
             if row != None:
@@ -526,10 +526,56 @@ async def addgif(ctx, url, game : str = "", comment : str = "", id : int = None)
                 await bot.say("Konnte kein Gif mit der id %d finden. Gif wurde **nicht** hinzugefügt!" % id)
                 return
         gifsConn.commit()
-        message = await bot.say("Gif hinzugefuegt")
-        await asyncio.sleep(4)
-        await bot.delete_message(message)
+        # get the inserted gif and format it
+        outMessage = formatGifWithId(lastid)
+        try:
+            await bot.delete_message(ctx.message)
+            await bot.say(outMessage)
+        except discord.Forbidden as e:
+            # when we don't have permissions to replace the message just print out a confirmation
+            message = await bot.say("Gif hinzugefuegt")        
+            await asyncio.sleep(6)
+            await bot.delete_message(message)
 
+def formatGifWithId(id : int):
+    gifsCur.execute("""SELECT url, game, comment, addedBy, ROWID from gifs
+                            WHERE ROWID = %s""" % (id))
+    row = gifsCur.fetchone()
+    return formatGif(row[0], row[1], row[2], row[3], row[4])
+    
+def formatGif(url, game, comment, addedBy, id):
+    outStr = '```ml\n'
+    if(comment != ""):
+        outStr += '#%d: "%s"\n' % (id, comment)
+    if(game != ""):
+        outStr += "Spiel: " + game + "\n" 
+    if(addedBy != ""):
+        title = ['Dr. ', 'Meister ', 'Sir ', 'Mr. ', 'Lady ', '', '', '', '', '', '', '', '', '', '', '']
+        # addedBy contains discord userid like Pacman#1234
+        outStr += "Von " + random.choice(title) + addedBy.split("#")[0]
+    outStr += '```'
+    outStr += url
+    
+    # search for combo gifs
+    for comboRow in gifsCur.execute("""Select id1, id2 from comboGifs
+                                        where id2 = %s
+                                        OR id1 = %s""" % (id, id)):
+        if comboRow[0] == id:
+            comboId = comboRow[1]
+        else:
+            comboId = comboRow[0]
+        gifsCur2 = gifsConn.cursor()
+        gifsCur2.execute("""Select url, comment, addedBy from gifs WHERE ROWID = %s """ % comboId)
+        comboGif = gifsCur2.fetchone()
+        if comboGif != None:
+            outStr += '\n```ml\n'
+            outStr += 'Das ist ein Combo Gif!\n'
+            outStr += 'Von: %s\n' % comboGif[2].split("#")[0]
+            outStr += '#%d: "%s"' % (comboId, comboGif[1])
+            outStr += '```'
+            outStr += comboGif[0]
+    return outStr
+        
 @bot.command(aliases=["gifs", "showgif", "gyf"])
 async def gif(search : str = ""):
     """Zeigt ein Gif aus der Datenbank an"""
@@ -543,52 +589,10 @@ async def gif(search : str = ""):
                                     ORDER BY RANDOM() LIMIT 1)""")
     row = gifsCur.fetchone()
     
-    '''
-    if(row == None):
-        # Search for game and comment second
-        gifsCur.execute("""SELECT url, game, comment, addedBy from gifs
-                            WHERE ROWID IN
-                                (Select ROWID from gifs
-                                    where LOWER(game) like '%"""+search.lower()+"""%' OR
-                                            LOWER(comment) like '%""" + search.lower() + """%' 
-                                    ORDER BY RANDOM() LIMIT 1)""")
-        row = gifsCur.fetchone()
-    '''
-    
     if(row != None):
-        outStr = '```ml\n'
-        if(row[2] != ""):
-            outStr += '#%d: "%s"\n' % (row[4], row[2])
-        if(row[1] != ""):
-            outStr += "Spiel: " + row[1] + "\n" 
-        if(row[3] != ""):
-            title = ['Dr. ', 'Meister ', 'Sir ', 'Mr. ', '', '', '', '', '', '', '']
-            outStr += "Von " + random.choice(title) + row[3].split("#")[0]
-        outStr += '```'
+        outStr = formatGif(row[0], row[1], row[2], row[3], row[4])
         
         await bot.say(outStr)
-        await bot.say(row[0])
-        
-        # search for combo gifs
-        id = row[4]
-        for comboRow in gifsCur.execute("""Select id1, id2 from comboGifs
-                        where id2 = %s
-                            OR id1 = %s""" % (id, id)):
-            if comboRow[0] == id:
-                comboId = comboRow[1]
-            else:
-                comboId = comboRow[0]
-            gifsCur2 = gifsConn.cursor()
-            gifsCur2.execute("""Select url, comment, addedBy from gifs WHERE ROWID = %s """ % comboId)
-            comboGif = gifsCur2.fetchone()
-            if comboGif != None:
-                gifStr = '```ml\n'
-                gifStr += 'Das ist ein Combo Gif!\n'
-                gifStr += '#%d: %s' % (comboId, comboGif[1])
-                gifStr += '```'
-                await bot.say(gifStr)
-                await bot.say(comboGif[0])
-
     else:
         await bot.say("Kein Gif zu '%s' gefunden.\nStattdessen gibt es :cake:." % search)        
 
