@@ -596,4 +596,22 @@ async def gif(search : str = ""):
     else:
         await bot.say("Kein Gif zu '%s' gefunden.\nStattdessen gibt es :cake:." % search)        
 
+@bot.command()
+async def gifstats():
+    gifsCur.execute("""Select count(*) from gifs""")
+    row = gifsCur.fetchone()
+    
+    s = '```ml\n'
+    s += "Anzahl an Gifs: %s\n\n" % row[0]
+    s += "| {:20}| {:8s}|\n".format("Name","Anzahl")
+    s += ('-' * 33)
+    s += "\n"
+    for row in gifsCur.execute("""SELECT addedBy, count(*)
+                        from gifs
+                        group by addedBy
+                        order by 2 desc"""):
+        s += "| {:20}| {:<8}|\n".format(row[0].split("#")[0], row[1])
+    s += '```'
+    await bot.say(s)
+                
 bot.run(token())
