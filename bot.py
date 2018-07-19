@@ -580,12 +580,20 @@ def formatGif(url, game, comment, addedBy, id):
 async def gif(search : str = ""):
     """Zeigt ein Gif aus der Datenbank an"""
     # Search for addedBy, game and comment
-    gifsCur.execute("""SELECT url, game, comment, addedBy, ROWID from gifs
+    
+    try:
+        # id suche
+        id = int(search)
+        gifsCur.execute("""SELECT url, game, comment, addedBy, ROWID from gifs
+                            WHERE ROWID = """ + search)
+    except ValueError:
+        # string suche
+        gifsCur.execute("""SELECT url, game, comment, addedBy, ROWID from gifs
                             WHERE ROWID IN
                                 (Select ROWID from gifs
-                                    where LOWER(addedBy) like '%"""+search.lower()+"""%' OR 
-                                        LOWER(game) like '%"""+search.lower()+"""%' OR
-                                        LOWER(comment) like '%""" + search.lower() + """%' 
+                                    where """ #LOWER(addedBy) like '%"""+search.lower()+"""%' OR 
+                                     """LOWER(game) like '%"""+search.lower()+"""%' OR
+                                        LOWER(comment) like '%""" + search.lower() + """%'
                                     ORDER BY RANDOM() LIMIT 1)""")
     row = gifsCur.fetchone()
     
@@ -613,5 +621,34 @@ async def gifstats():
         s += "| {:20}| {:<8}|\n".format(row[0].split("#")[0], row[1])
     s += '```'
     await bot.say(s)
-                
+
+@bot.command(aliases=["listgifs", "listgif", "searchgifs"])
+async def searchgif(searchterm : str = ""):
+    """Zeigt ein Gif aus der Datenbank an"""
+    # Search for gifs and show a list
+    foundgif = False
+    outStr = '```ml\n'
+    outStr += "Folgende Gifs wurden gefunden:\n"
+    outStr += "| {:6}| {:<15s}| {:<45s}| {:<10s}\n".format("ID","Spieler","Name", "Spiel")
+    outStr += ('-' * 84)
+    outStr += "\n"
+    counter = 0
+    for gif in gifsCur.execute("""Select game, comment, addedBy, ROWID from gifs
+                                where """ #LOWER(addedBy) like '%""" + searchterm.lower() + """%' OR 
+                                    """LOWER(game) like '%""" + searchterm.lower() + """%' OR
+                                    LOWER(comment) like '%""" + searchterm.lower() + """%'"""):
+        outStr += "| {:6}| {:<15.16}| {:<45.44}| {:<10.10s}\n".format("#"+str(gif[3]), str(gif[2]).split("#")[0], str(gif[1]), str(gif[0]))
+        foundgif = True
+        counter += 1
+        if(counter >= 15):
+            outStr += "Es wurden zu viele Gifs gefunden, bitte genauer suchen ..."
+            break
+    outStr += '```'
+    if(foundgif):
+        await bot.say(outStr)
+    else:
+        await bot.say("Kein Gif zu '" + searchterm + "' gefunden :sob:")
+    
+
+    
 bot.run(token())
