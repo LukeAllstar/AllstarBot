@@ -649,6 +649,25 @@ async def searchgif(searchterm : str = ""):
     else:
         await bot.say("Kein Gif zu '" + searchterm + "' gefunden :sob:")
     
-
+@bot.command(pass_context=True)
+async def deletegif(ctx, id):
+    """Löscht ein Gif mit der angegebenen ID. Kann nur vom ersteller gelöscht werden."""
+    gifsCur.execute("""Select addedBy, url from gifs
+                        where ROWID = """ + id)
+    row = gifsCur.fetchone()
     
+    if(row != None):
+        if(str(ctx.message.author) == str(row[0])):
+            # TODO: combo gifs löschen
+            gifsCur.execute("""Delete from gifs
+                                where ROWID = """ + id)
+            with open("deletedgifs.txt", "a") as pollfile:
+                pollfile.write("Deleting gif #" + row[0] + " - " + row[1])
+                pollfile.write("\n")
+            await bot.say("Gif #" + id + " gelöscht :put_litter_in_its_place: ")
+        else:
+            await bot.say(":no_entry_sign: " + ctx.message.author.mention + " Du bist nicht berechtigt Gif #" + id +" zu löschen :no_entry_sign:")
+    else:
+        bot.say("Gif mit der ID #" + id + " nicht gefunden.")
+            
 bot.run(token())
