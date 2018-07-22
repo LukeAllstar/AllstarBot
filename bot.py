@@ -547,6 +547,9 @@ def formatGif(url, game, comment, addedBy, id):
     outStr = '```ml\n'
     if(comment != ""):
         outStr += '#%d: "%s"\n' % (id, comment)
+    else:
+        outStr += '#%d \n' % (id)
+    
     if(game != ""):
         outStr += "Spiel: " + game + "\n" 
     if(addedBy != ""):
