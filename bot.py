@@ -547,6 +547,9 @@ def formatGif(url, game, comment, addedBy, id):
     outStr = '```ml\n'
     if(comment != ""):
         outStr += '#%d: "%s"\n' % (id, comment)
+    else:
+        outStr += '#%d \n' % (id)
+    
     if(game != ""):
         outStr += "Spiel: " + game + "\n" 
     if(addedBy != ""):
@@ -580,12 +583,20 @@ def formatGif(url, game, comment, addedBy, id):
 async def gif(search : str = ""):
     """Zeigt ein Gif aus der Datenbank an"""
     # Search for addedBy, game and comment
-    gifsCur.execute("""SELECT url, game, comment, addedBy, ROWID from gifs
+    
+    try:
+        # id suche
+        id = int(search)
+        gifsCur.execute("""SELECT url, game, comment, addedBy, ROWID from gifs
+                            WHERE ROWID = """ + search)
+    except ValueError:
+        # string suche
+        gifsCur.execute("""SELECT url, game, comment, addedBy, ROWID from gifs
                             WHERE ROWID IN
                                 (Select ROWID from gifs
-                                    where LOWER(addedBy) like '%"""+search.lower()+"""%' OR 
-                                        LOWER(game) like '%"""+search.lower()+"""%' OR
-                                        LOWER(comment) like '%""" + search.lower() + """%' 
+                                    where """ #LOWER(addedBy) like '%"""+search.lower()+"""%' OR 
+                                     """LOWER(game) like '%"""+search.lower()+"""%' OR
+                                        LOWER(comment) like '%""" + search.lower() + """%'
                                     ORDER BY RANDOM() LIMIT 1)""")
     row = gifsCur.fetchone()
     
@@ -630,4 +641,52 @@ async def combogif(id1 : int, id2 : int):
     gifsCur.execute("""INSERT INTO comboGifs (id1, id2) VALUES (%d, %d)""" % (id1, id2))
     await bot.say("Gifs #%s und #%s wurden zu einem ComboGif vereint :yin_yang: " % (id1, id2))
     
+@bot.command(aliases=["listgifs", "listgif", "searchgifs"])
+async def searchgif(searchterm : str = ""):
+    """Zeigt ein Gif aus der Datenbank an"""
+    # Search for gifs and show a list
+    foundgif = False
+    outStr = '```ml\n'
+    outStr += "Folgende Gifs wurden gefunden:\n"
+    outStr += "| {:6}| {:<15s}| {:<45s}| {:<10s}\n".format("ID","Spieler","Name", "Spiel")
+    outStr += ('-' * 84)
+    outStr += "\n"
+    counter = 0
+    for gif in gifsCur.execute("""Select game, comment, addedBy, ROWID from gifs
+                                where """ #LOWER(addedBy) like '%""" + searchterm.lower() + """%' OR 
+                                    """LOWER(game) like '%""" + searchterm.lower() + """%' OR
+                                    LOWER(comment) like '%""" + searchterm.lower() + """%'"""):
+        outStr += "| {:6}| {:<15.16}| {:<45.44}| {:<10.10s}\n".format("#"+str(gif[3]), str(gif[2]).split("#")[0], str(gif[1]), str(gif[0]))
+        foundgif = True
+        counter += 1
+        if(counter >= 15):
+            outStr += "Es wurden zu viele Gifs gefunden, bitte genauer suchen ..."
+            break
+    outStr += '```'
+    if(foundgif):
+        await bot.say(outStr)
+    else:
+        await bot.say("Kein Gif zu '" + searchterm + "' gefunden :sob:")
+    
+@bot.command(pass_context=True)
+async def deletegif(ctx, id):
+    """Löscht ein Gif mit der angegebenen ID. Kann nur vom ersteller gelöscht werden."""
+    gifsCur.execute("""Select addedBy, url from gifs
+                        where ROWID = """ + id)
+    row = gifsCur.fetchone()
+    
+    if(row != None):
+        if(str(ctx.message.author) == str(row[0])):
+            # TODO: combo gifs löschen
+            gifsCur.execute("""Delete from gifs
+                                where ROWID = """ + id)
+            with open("deletedgifs.txt", "a") as pollfile:
+                pollfile.write("Deleting gif #" + row[0] + " - " + row[1])
+                pollfile.write("\n")
+            await bot.say("Gif #" + id + " gelöscht :put_litter_in_its_place: ")
+        else:
+            await bot.say(":no_entry_sign: " + ctx.message.author.mention + " Du bist nicht berechtigt Gif #" + id +" zu löschen :no_entry_sign:")
+    else:
+        bot.say("Gif mit der ID #" + id + " nicht gefunden.")
+            
 bot.run(token())
