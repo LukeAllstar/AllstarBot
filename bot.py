@@ -613,5 +613,21 @@ async def gifstats():
         s += "| {:20}| {:<8}|\n".format(row[0].split("#")[0], row[1])
     s += '```'
     await bot.say(s)
-                
+    
+@bot.command(aliases=["addcombo", "addcombogif"])
+async def combogif(id1 : int, id2 : int):
+    # verify that both ids exist
+    gifsCur.execute("""Select ROWID from gifs where ROWID = %s""" % (id1))
+    row = gifsCur.fetchone()
+    if row == None:
+        notfound = True
+        
+    gifsCur.execute("""Select ROWID from gifs where ROWID = %s""" % (id2))
+    row = gifsCur.fetchone()
+    if row == None:
+        notfound = True
+        
+    gifsCur.execute("""INSERT INTO comboGifs (id1, id2) VALUES (%d, %d)""" % (id1, id2))
+    await bot.say("Gifs #%s und #%s wurden zu einem ComboGif vereint :yin_yang: " % (id1, id2))
+    
 bot.run(token())
