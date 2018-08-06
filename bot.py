@@ -665,6 +665,11 @@ async def searchgif(searchterm : str = ""):
     initStr += ('-' * 84)
     initStr += "\n"
     outStr = initStr
+    outStr = '```ml\n'
+    outStr += "Folgende Gifs wurden gefunden:\n"
+    outStr += "| {:6}| {:<15s}| {:<45s}| {:<10s}\n".format("ID","Spieler","Name", "Spiel")
+    outStr += ('-' * 84)
+    outStr += "\n"
     counter = 0
     for gif in gifsCur.execute("""Select game, comment, addedBy, ROWID from gifs
                                 where """ #LOWER(addedBy) like '%""" + searchterm.lower() + """%' OR 
@@ -733,6 +738,6 @@ def write_to_file(filename, content):
     f.write(content)
     f.close()
 """
-    
+
             
 bot.run(token())
