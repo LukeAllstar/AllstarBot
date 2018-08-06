@@ -10,6 +10,8 @@ import os
 import setup
 import strawpoll
 import asyncio
+import aiohttp
+
 
 with open('config.json') as json_data_file:
     data = json.load(json_data_file)
@@ -547,6 +549,9 @@ def formatGif(url, game, comment, addedBy, id):
     outStr = '```ml\n'
     if(comment != ""):
         outStr += '#%d: "%s"\n' % (id, comment)
+    else:
+        outStr += '#%d \n' % (id)
+    
     if(game != ""):
         outStr += "Spiel: " + game + "\n" 
     if(addedBy != ""):
@@ -580,12 +585,20 @@ def formatGif(url, game, comment, addedBy, id):
 async def gif(search : str = ""):
     """Zeigt ein Gif aus der Datenbank an"""
     # Search for addedBy, game and comment
-    gifsCur.execute("""SELECT url, game, comment, addedBy, ROWID from gifs
+    
+    try:
+        # id suche
+        id = int(search)
+        gifsCur.execute("""SELECT url, game, comment, addedBy, ROWID from gifs
+                            WHERE ROWID = """ + search)
+    except ValueError:
+        # string suche
+        gifsCur.execute("""SELECT url, game, comment, addedBy, ROWID from gifs
                             WHERE ROWID IN
                                 (Select ROWID from gifs
-                                    where LOWER(addedBy) like '%"""+search.lower()+"""%' OR 
-                                        LOWER(game) like '%"""+search.lower()+"""%' OR
-                                        LOWER(comment) like '%""" + search.lower() + """%' 
+                                    where """ #LOWER(addedBy) like '%"""+search.lower()+"""%' OR 
+                                     """LOWER(game) like '%"""+search.lower()+"""%' OR
+                                        LOWER(comment) like '%""" + search.lower() + """%'
                                     ORDER BY RANDOM() LIMIT 1)""")
     row = gifsCur.fetchone()
     
@@ -603,15 +616,123 @@ async def gifstats():
     
     s = '```ml\n'
     s += "Anzahl an Gifs: %s\n\n" % row[0]
-    s += "| {:20}| {:8s}|\n".format("Name","Anzahl")
-    s += ('-' * 33)
+    s += "| {:<30.19}| {:8s}|\n".format("User","Anzahl")
+    s += ('-' * 43)
     s += "\n"
     for row in gifsCur.execute("""SELECT addedBy, count(*)
                         from gifs
                         group by addedBy
                         order by 2 desc"""):
-        s += "| {:20}| {:<8}|\n".format(row[0].split("#")[0], row[1])
+        s += "| {:<30.19}| {:<8}|\n".format(row[0].split("#")[0], row[1])
+    s += '```\n'
+    s += '```ml\n'
+    s += "| {:<30.19}| {:8s}|\n".format("Spiel","Anzahl")
+    s += ('-' * 43)
+    s += "\n"
+    for row in gifsCur.execute("""SELECT game, count(*)
+                        from gifs
+                        group by game
+                        order by 2 desc"""):
+        s += "| {:<30.19}| {:<8}|\n".format(row[0].split("#")[0], row[1])
     s += '```'
     await bot.say(s)
-                
+    
+@bot.command(aliases=["addcombo", "addcombogif"])
+async def combogif(id1 : int, id2 : int):
+    # verify that both ids exist
+    gifsCur.execute("""Select ROWID from gifs where ROWID = %s""" % (id1))
+    row = gifsCur.fetchone()
+    if row == None:
+        notfound = True
+        
+    gifsCur.execute("""Select ROWID from gifs where ROWID = %s""" % (id2))
+    row = gifsCur.fetchone()
+    if row == None:
+        notfound = True
+        
+    gifsCur.execute("""INSERT INTO comboGifs (id1, id2) VALUES (%d, %d)""" % (id1, id2))
+    gifsConn.commit()
+    await bot.say("Gifs #%s und #%s wurden zu einem ComboGif vereint :yin_yang: " % (id1, id2))
+    
+@bot.command(aliases=["listgifs", "listgif", "searchgifs"])
+async def searchgif(searchterm : str = ""):
+    """Zeigt ein Gif aus der Datenbank an"""
+    # Search for gifs and show a list
+    foundgif = False
+    initStr = '```ml\n'
+    initStr += "Folgende Gifs wurden gefunden:\n"
+    initStr += "| {:6}| {:<15s}| {:<45s}| {:<10s}\n".format("ID","Spieler","Name", "Spiel")
+    initStr += ('-' * 84)
+    initStr += "\n"
+    outStr = initStr
+    counter = 0
+    for gif in gifsCur.execute("""Select game, comment, addedBy, ROWID from gifs
+                                where """ #LOWER(addedBy) like '%""" + searchterm.lower() + """%' OR 
+                                    """LOWER(game) like '%""" + searchterm.lower() + """%' OR
+                                    LOWER(comment) like '%""" + searchterm.lower() + """%'"""):
+        outStr += "| {:6}| {:<15.16}| {:<45.44}| {:<10.10s}\n".format("#"+str(gif[3]), str(gif[2]).split("#")[0], str(gif[1]), str(gif[0]))
+        foundgif = True
+        counter += 1
+        if(counter % 20 == 0):
+            outStr += '```'
+            await bot.whisper(outStr)
+            outStr = initStr
+    outStr += '```'
+    if(foundgif):
+        if(counter <= 7):
+            await bot.say(outStr)
+        else:
+            await bot.reply("Resultate übermittelt :envelope_with_arrow: ")
+            await bot.whisper(outStr)
+    else:
+        await bot.say("Kein Gif zu '" + searchterm + "' gefunden :sob:")
+    
+@bot.command(pass_context=True)
+async def deletegif(ctx, id):
+    """Löscht ein Gif mit der angegebenen ID. Kann nur vom ersteller gelöscht werden."""
+    gifsCur.execute("""Select addedBy, url from gifs
+                        where ROWID = """ + id)
+    row = gifsCur.fetchone()
+    
+    if(row != None):
+        if(str(ctx.message.author) == str(row[0])):
+            # TODO: combo gifs löschen
+            gifsCur.execute("""Delete from gifs
+                                where ROWID = """ + id)
+            gifsConn.commit()
+            with open("deletedgifs.txt", "a") as pollfile:
+                pollfile.write("Deleting gif #" + row[0] + " - " + row[1])
+                pollfile.write("\n")
+            await bot.say("Gif #" + id + " gelöscht :put_litter_in_its_place: ")
+        else:
+            await bot.say(":no_entry_sign: " + ctx.message.author.mention + " Du bist nicht berechtigt Gif #" + id +" zu löschen :no_entry_sign:")
+    else:
+        bot.say("Gif mit der ID #" + id + " nicht gefunden.")
+   
+"""   
+@bot.command(pass_context=True)
+async def testupload(ctx, text):
+    print(text)
+    print(ctx.message)
+    print(ctx.message.attachments)
+    print(ctx.message.attachments[0]['url'])
+    content = await get(ctx.message.attachments[0]['url'])
+    write_to_file("media/audio/test.mp3", content)
+    
+    #urllib.request.urlretrieve(ctx.message.attachments[0]['url'], "media/audio/test.mp3")
+
+# a helper coroutine to perform GET requests:
+@asyncio.coroutine
+def get(*args, **kwargs):
+    response = yield from aiohttp.request('GET', *args, **kwargs)
+    return (yield from response.read())
+    
+# get content and write it to file
+def write_to_file(filename, content):
+    f = open(filename, 'wb')
+    f.write(content)
+    f.close()
+"""
+    
+            
 bot.run(token())
