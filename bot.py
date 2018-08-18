@@ -429,6 +429,133 @@ async def gtaplaylist(playlist : str = ""):
             rank += 1
         s += "```"
         await bot.say(s)
+
+@bot.command()
+async def gtaplayerstatsfull(player : str):
+    """Playliststatistik für einen Spieler"""
+    i = 0
+    s = "```ml\n"
+    s += "Spieler Statistik für %s\n\n" % player
+    s += "| {:10}| {:8s}| {:12s}|\n".format("Playlist", "Punkte", "Platzierung")
+    s += ('-' * 37)
+    s += "\n"
+    for row in gtaCur.execute("""
+                        with tt(playlistid, playlistname, playername, points) as (
+                                                Select playlistid, x.name as playlistname, player.name as playername, sum(points) as points from
+                                                    ( Select *,
+                                                            CASE
+                                                            WHEN isdsq = 'True' OR isdnf = 'True' THEN 0
+                                                            WHEN rank = 1 THEN 15
+                                                            WHEN rank = 2 THEN 12
+                                                            WHEN rank = 3 THEN 10
+                                                            WHEN rank BETWEEN 4 AND 10 THEN 12 - rank
+                                                            ELSE 1
+                                                            END as points from
+                                                        playlist
+                                                        join race on race.playlistid = playlist.rowid
+                                                        join raced on raced.raceid = race.rowid
+                                                    ) as x
+                                                    join player on playerid = player.rowid
+                                                        group by playlistid, x.name, playername
+                                                        order by playlistid asc, points desc)
+                    Select s.playlistid, s.playlistname, s.playername, s.points, (
+                            Select count(*)+1 
+                                from tt as my 
+                                where my.points > s.points and my.playlistid = s.playlistid) as rank
+                    from tt as s
+                                where playername='"""+player+"""'
+                                order by rank asc, points desc"""):
+        s += "| {:10}| {:8s}| {:12s}|\n".format(str(row[1]), str(row[3]), str(row[4]))
+        i += 1
+        if(i >= 15):
+            s += "```"
+            await bot.whisper(s)
+            s = "```ml\n"
+            i= 0
+    if(i != 0):
+        s += "```"
+        await bot.whisper(s)
+    await bot.reply("Resultate übermittelt :envelope_with_arrow: ")
+        
+@bot.command()
+async def gtaplayerstats(player : str):
+    first = True
+    s = "```ml\n"
+    s += "Statistiken für %s\n" % player
+    for row in gtaCur.execute("""
+                    Select playlistname, rank
+                    from playerstats
+                    where playername = LOWER('"""+player+"""')
+                    and rank = (Select min(rank) from playerstats where playername = LOWER('"""+player+"""'))"""):
+        if(first):
+            s += "Bester Rang: "
+            s += str(row[1])
+            s += "\n    in diesen Playlisten: "
+        else:
+            s += ", "            
+        s += str(row[0])
+        first = False
+
+    s += "\n"
+    first = True
+    
+    # Schlechtester Rang
+    for row in gtaCur.execute("""
+                    Select playlistname, rank
+                    from playerstats
+                    where playername = LOWER('"""+player+"""')
+                    and rank = (Select max(rank) from playerstats where playername = LOWER('"""+player+"""'))"""):
+        if(first):
+            s += "Schlechtester Rang: "
+            s += str(row[1])
+            s += "\n    in diesen Playlisten: "
+        else:
+            s += ", "            
+        s += str(row[0])
+        first = False
+        
+    s += "\n"
+    first = True
+    
+    # Beste Punktezahl
+    for row in gtaCur.execute("""
+                    Select playlistname, points
+                    from playerstats
+                    where playername = LOWER('"""+player+"""')
+                    and points = (Select max(points) from playerstats where playername = LOWER('"""+player+"""'))"""):
+        if(first):
+            s += "Meiste Punkte: "
+            s += str(row[1])
+            s += "\n    in diesen Playlisten: "
+        else:
+            s += ", "            
+        s += str(row[0])
+        first = False
+    
+    s += "\n"
+    first = True
+        
+    # Schlechteste Punktezahl
+    for row in gtaCur.execute("""
+                    Select playlistname, points
+                    from playerstats
+                    where playername = LOWER('"""+player+"""')
+                    and points = (Select min(points) from playerstats where playername = LOWER('"""+player+"""'))"""):
+        if(first):
+            s += "Wenigste Punkte: "
+            s += str(row[1])
+            s += "\n    in diesen Playlisten: "
+        else:
+            s += ", "            
+        s += str(row[0])
+        first = False
+    
+    s += "\n"
+    first = True
+    
+    s+= "\n```"
+    await bot.say(s)
+            
         
 @bot.command()
 async def updatetabletop(delete : bool = False, create : bool = False):

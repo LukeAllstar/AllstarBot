@@ -96,6 +96,30 @@ class Gtasheet:
                             isdsq INT,
                             FOREIGN KEY(raceid) REFERENCES race(rowid),
                             FOREIGN KEY(playerid) REFERENCES player(ROWID))''')
+                self.cur.execute('''Create View playerstats as 
+                                    with tt(playlistid, playlistname, playername, points) as (
+                                                Select playlistid, x.name as playlistname, player.name as playername, sum(points) as points from
+                                                    ( Select *,
+                                                            CASE
+                                                            WHEN isdsq = 'True' OR isdnf = 'True' THEN 0
+                                                            WHEN rank = 1 THEN 15
+                                                            WHEN rank = 2 THEN 12
+                                                            WHEN rank = 3 THEN 10
+                                                            WHEN rank BETWEEN 4 AND 10 THEN 12 - rank
+                                                            ELSE 1
+                                                            END as points from
+                                                        playlist
+                                                        join race on race.playlistid = playlist.rowid
+                                                        join raced on raced.raceid = race.rowid
+                                                    ) as x
+                                                    join player on playerid = player.rowid
+                                                        group by playlistid, x.name, playername
+                                                        order by playlistid asc, points desc)
+                                    Select s.playlistid, s.playlistname, s.playername, s.points, (
+                                            Select count(*)+1 
+                                                from tt as my 
+                                                where my.points > s.points and my.playlistid = s.playlistid) as rank
+                                    from tt as s''')
                 self.conn.commit()
             else:
                 self.cur.execute('''Delete from raced''')
