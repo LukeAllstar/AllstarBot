@@ -11,6 +11,7 @@ import setup
 import strawpoll
 import asyncio
 import aiohttp
+import datetime
 
 
 with open('config.json') as json_data_file:
@@ -866,5 +867,11 @@ def write_to_file(filename, content):
     f.close()
 """
 
+@bot.command(aliases=["istesdonnerstag", "istheutedonnerstag", "istodaythursday"])
+async def isitthursday():
+    if(datetime.datetime.today().weekday() == 3):
+        await bot.say("yes")
+    else:
+        await bot.say("no")
             
 bot.run(token())
