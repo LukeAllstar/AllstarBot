@@ -59,7 +59,7 @@ def createGifs(force : bool):
         print("Creating db/gifs.db ...")
         gifConn = sqlite3.connect('db/gifs.db')
         gifCur = gifConn.cursor()
-        gifCur.execute('''CREATE TABLE gifs(url, game, comment, addedBy, addedOn)''')
+        gifCur.execute('''CREATE TABLE gifs(url, game, comment, addedBy, addedOn, messageId)''')
         gifCur.execute('''CREATE TABLE comboGifs(id1, id2)''')
         gifConn.commit()
         print("... Finished")

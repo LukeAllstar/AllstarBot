@@ -660,7 +660,8 @@ async def addgif(ctx, url, game : str = "", comment : str = "", id : int = None)
         outMessage = formatGifWithId(lastid)
         try:
             await bot.delete_message(ctx.message)
-            await bot.say(outMessage)
+            gifMsg = await bot.say(outMessage)
+            gifsCur.execute("""UPDATE gifs SET messageId = '%s' WHERE ROWID = %s""" % (gifMsg.id, lastid))
         except discord.Forbidden as e:
             # when we don't have permissions to replace the message just print out a confirmation
             message = await bot.say("Gif hinzugefuegt")        
@@ -873,5 +874,35 @@ async def isitthursday():
         await bot.say("yes")
     else:
         await bot.say("no")
+
+#@bot.command()
+async def testMsgReaction():
+    msg = await bot.say("this is a test")
+    print("original msg: ")
+    print(msg)
+    await bot.add_reaction(msg, '\U0001F44D')
+    #emojis = bot.get_all_emojis()
+    #print(emojis)
+    await asyncio.sleep(10)
+    cache_msg = discord.utils.get(bot.messages, id=msg.id)
+    print("new msg: ")
+    print(cache_msg)
+    print(cache_msg.reactions)
+    print(cache_msg.id)
+    for reaction in cache_msg.reactions:
+        print(reaction.emoji)
+        print(reaction.count)
+        
+#@bot.command(pass_context=True)
+async def msgStat(ctx):
+    #cache_msg = discord.utils.get(bot.messages, id=510217606599409704)
+    cache_msg = await bot.get_message(ctx.message.channel, 510222196459831296)
+    print("new msg: ")
+    print(cache_msg)
+    print(cache_msg.reactions)
+    print(cache_msg.id)
+    for reaction in cache_msg.reactions:
+        print(reaction.emoji)
+        print(reaction.count)
             
 bot.run(token())
