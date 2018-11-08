@@ -661,7 +661,9 @@ async def addgif(ctx, url, game : str = "", comment : str = "", id : int = None)
         try:
             await bot.delete_message(ctx.message)
             gifMsg = await bot.say(outMessage)
-            gifsCur.execute("""UPDATE gifs SET messageId = '%s' WHERE ROWID = %s""" % (gifMsg.id, lastid))
+            # after sending the message update the entry to save the message id and the channel id
+            gifsCur.execute("""UPDATE gifs SET messageId = '%s', channelId = '%s' WHERE ROWID = %s""" % (gifMsg.id, gifMsg.channel.id, lastid))
+            gifsConn.commit()
         except discord.Forbidden as e:
             # when we don't have permissions to replace the message just print out a confirmation
             message = await bot.say("Gif hinzugefuegt")        
@@ -897,6 +899,8 @@ async def testMsgReaction():
 async def msgStat(ctx):
     #cache_msg = discord.utils.get(bot.messages, id=510217606599409704)
     cache_msg = await bot.get_message(ctx.message.channel, 510222196459831296)
+    print(ctx.message.channel)
+    print(ctx.message.channel.id)
     print("new msg: ")
     print(cache_msg)
     print(cache_msg.reactions)
