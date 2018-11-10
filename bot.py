@@ -603,11 +603,12 @@ async def updategta(delete : bool = False, create : bool = False):
         print(e)
 
 @bot.command(pass_context=True)
-async def rammerdestages(ctx, chan:str = "GTA", extraOptions:str = ""):
+async def rammerdestages(ctx, chan:str = "GTA", extraOptions:str = "", hours : int = 2):
     now = datetime.datetime.now()
     api = strawpoll.API()
     options = []
-    
+    nicknameMapping = {}
+    fairGefahrenStr = "Alle sind fair gefahren ☺"
     if "," in extraOptions:
         for o in extraOptions.split(","):
             options.append(o)
@@ -617,9 +618,11 @@ async def rammerdestages(ctx, chan:str = "GTA", extraOptions:str = ""):
     for channel in ctx.message.server.channels:
         if chan in channel.name: 
             for member in channel.voice_members:
-                options.append(str(member).split("#")[0])
+                name = str(member).split("#")[0]
+                options.append(name)
+                nicknameMapping[name] = member
     if len(options) >= 2:  
-        options.append("Alle sind fair gefahren ☺")
+        options.append(fairGefahrenStr)
         poll = strawpoll.Poll("Rammer des Tages " + now.strftime("%Y-%m-%d"), options)
         poll.multi = True
         poll = await api.submit_poll(poll)
@@ -630,6 +633,55 @@ async def rammerdestages(ctx, chan:str = "GTA", extraOptions:str = ""):
         with open("polls.txt", "a") as pollfile:
             pollfile.write(poll.url)
             pollfile.write("\n")
+            if(hours > 0 and hours <= 24):
+                #print("waiting for " + str(3600 * hours) + " seconds")
+                await asyncio.sleep(3600*hours)
+                # retrieve poll and print the winner(s)
+                resultPoll = await api.get_poll(poll.url)
+                orderedResults = resultPoll.results()
+                i = 0
+                votes = orderedResults[0][1]
+                winners = []
+                printWonder = False
+                
+                while(len(orderedResults) > i and votes == orderedResults[i][1]):
+                    winners.append(orderedResults[i][0])
+                    i = i + 1
+                
+                numberOfWinners = len(winners)
+                if(fairGefahrenStr in winners):
+                    numberOfWinners -= 1
+                    printWonder = True
+                
+                if(numberOfWinners == 1):
+                    gratulateMsg = "Der Rammer des Tages ist "
+                else:
+                    gratulateMsg = "Die Rammer des Tages sind "
+                first = True
+                
+                for winner in winners:
+                    if(not first):
+                        if(numberOfWinners == 2):
+                            gratulateMsg += " und "
+                        else:
+                            gratulateMsg += ", "
+                
+                    if(winner == fairGefahrenStr):
+                        printWonder = True
+                    elif(winner in nicknameMapping):
+                        gratulateMsg += nicknameMapping[winner].mention
+                    else:
+                        # not a user, might be and extra option
+                        gratulateMsg += winner
+                    first = False
+                gratulateMsg += " mit " + str(votes) + " Stimmen"
+                if(printWonder and numberOfWinners == 0):
+                    await bot.say("OH MEIN GOTT! Diesmal sind alle fair gefahren! :tada: ")
+                elif(printWonder and numberOfWinners > 0):
+                    gratulateMsg += ". Es gab auch " + str(votes) + " Stimmen, dass alle fair gefahren sind :thumbsup:"
+                    await bot.say(gratulateMsg)
+                else:
+                    await bot.say(gratulateMsg)
     else:
         await bot.say("Konnte die Umfrage nicht anlegen. Zu wenige Leute im Channel " + chan)
         
@@ -908,5 +960,24 @@ async def msgStat(ctx):
     for reaction in cache_msg.reactions:
         print(reaction.emoji)
         print(reaction.count)
+        
+#@bot.command()
+async def testGetResult():
+    api = strawpoll.API()
+    resultPoll = await api.get_poll("https://www.strawpoll.me/16760672")
+    print(resultPoll.result_at(0))
+    print(resultPoll.options)
+    print(resultPoll.votes)
+    print(resultPoll.results())
+    orderedResults = resultPoll.results()
+    i = 0
+    votes = orderedResults[0][1]
+    winners = []
+    while(len(orderedResults) > i and votes == orderedResults[i][1]):
+        print(orderedResults[i][1])
+        winners.append(orderedResults[i][0])
+        i = i + 1
+    
+    print("Die Rammerdestages sind: %s" % winners)
             
 bot.run(token())
