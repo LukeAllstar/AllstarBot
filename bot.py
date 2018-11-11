@@ -738,7 +738,7 @@ def formatGif(url, game, comment, addedBy, id):
     if(game != ""):
         outStr += "Spiel: " + game + "\n" 
     if(addedBy != ""):
-        title = ['Dr. ', 'Meister ', 'Sir ', 'Mr. ', 'Lady ', '', '', '', '', '', '', '', '', '', '', '']
+        title = ['Dr. ', 'Meister ', 'Sir ', 'Mr. ', 'Lady ', 'Senor ', 'Der ', 'Das ', 'Die ', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']
         # addedBy contains discord userid like Pacman#1234
         outStr += "Von " + random.choice(title) + addedBy.split("#")[0]
     outStr += '```'
@@ -979,5 +979,89 @@ async def testGetResult():
         i = i + 1
     
     print("Die Rammerdestages sind: %s" % winners)
-            
+    
+#@bot.command()
+async def gifOfTheWeek():
+    """ posts the gif with the most upvotes to some predefined channels """
+    postTo = {}
+    # this is hardcoded atm. maybe i'll move this to a config file in the future .. but probably not
+    postTo["Lukes Playground"] = "test"
+    postTo["Unterwasserpyromanen"] = "bot-ecke"
+    gifsOfTheWeek = []
+    mostVotes = 0
+    await bot.wait_until_ready()
+    for channel in bot.get_all_channels():
+        if(channel.server.name in postTo):
+            # find the correct channel
+            if(postTo[channel.server.name] == channel.name):
+                # find the gif of the current week
+                for gif in gifsCur.execute("""Select game, comment, addedBy, date(addedOn), messageId, channelId, ROWID, url """ +
+                                """from gifs """+
+                                """where date(addedOn) > date('now', '-7 day')"""):
+                    if(gif[4] != None and gif[5] != None):
+                        gifChannel = discord.utils.get(bot.get_all_channels(), id=gif[5])
+                        cache_msg = await bot.get_message(gifChannel, gif[4])
+                        for reaction in cache_msg.reactions:
+                            if(reaction.emoji == '👍'):
+                                if(reaction.count > mostVotes):
+                                    gifsOfTheWeek = []
+                                    mostVotes = reaction.count
+                                
+                                if(reaction.count == mostVotes):
+                                    gifsOfTheWeek.append(gif)
+                await bot.send_message(channel, "**GIF DER WOCHE**")
+                if(len(gifsOfTheWeek) == 0):
+                    bot.send_message(channel, "Diese Woche gibt es leider kein Gif der Woche :(")
+                if(len(gifsOfTheWeek) > 1):
+                    gifOfTheWeek = random.choice(gifsOfTheWeek)
+                    with open("gifsOfTheWeek.txt", "a") as gotwfile:
+                        gotwfile.write(datetime.datetime.today().date().isoformat())
+                        gotwfile.write(":")
+                        gotwfile.write(str(gifOfTheWeek[6]))
+                        gotwfile.write("\n")
+                    msg="Diese Woche gab es einen Gleichstand zwischen den Gifs "
+                    first = True
+                    for gif in gifsOfTheWeek:
+                        if(first):
+                            first = False
+                        else:
+                            msg += ", "
+                        msg += "#"+str(gif[6])
+                    await bot.send_message(channel, msg)
+                else:
+                    gifOfTheWeek = gifsOfTheWeek[0]
+                
+                await bot.send_message(channel, "Das Gif der Woche mit "+ str(mostVotes) +" upvotes ist Gif #"+str(gifOfTheWeek[6]))
+                gifMsg = formatGif(gifOfTheWeek[7], gifOfTheWeek[0], gifOfTheWeek[1], gifOfTheWeek[2], gifOfTheWeek[6])
+                await bot.send_message(channel, gifMsg)
+
+async def gifOfTheWeekScheduler():
+    await bot.wait_until_ready()
+    while not bot.is_closed:
+        now = datetime.datetime.today()
+        print(now)
+        if(now.weekday() == 6): # sunday
+            if(now.hour == 22): # at 22 o clock (raspi is running an hour earlier so 23 o clock)
+                postGotf = True
+                with open("gifsOfTheWeek.txt", "r") as gotwfile:
+                    lines = gotwfile.readlines()
+                    for line in lines:
+                        print(line)
+                        lineDate=line.split(":")[0]
+                        try:
+                            print(datetime.datetime.strptime(str(lineDate),'%Y-%m-%d').date())
+                            print(now.date())
+                            if(datetime.datetime.strptime(str(lineDate),'%Y-%m-%d').date() == now.date()):
+                                # skip because it has already been posted
+                                postGotf = False
+                        except:
+                            print("ignore parse error")
+                if(postGotf):
+                    await gifOfTheWeek()
+                await asyncio.sleep(3600) # sleep for an hour
+            else:
+                print("test3")
+                await asyncio.sleep(3600) # sleep for an hour
+                
+bot.loop.create_task(gifOfTheWeekScheduler())
 bot.run(token())
