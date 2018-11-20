@@ -772,11 +772,11 @@ async def gif(search : str = ""):
     try:
         # id suche
         id = int(search)
-        gifsCur.execute("""SELECT url, game, comment, addedBy, ROWID from gifs
+        gifsCur.execute("""SELECT url, game, comment, addedBy, ROWID, messageId, channelId from gifs
                             WHERE ROWID = """ + search)
     except ValueError:
         # string suche
-        gifsCur.execute("""SELECT url, game, comment, addedBy, ROWID from gifs
+        gifsCur.execute("""SELECT url, game, comment, addedBy, ROWID, messageId, channelId from gifs
                             WHERE ROWID IN
                                 (Select ROWID from gifs
                                     where """ #LOWER(addedBy) like '%"""+search.lower()+"""%' OR 
@@ -788,7 +788,9 @@ async def gif(search : str = ""):
     if(row != None):
         outStr = formatGif(row[0], row[1], row[2], row[3], row[4])
         
-        await bot.say(outStr)
+        msg = await bot.say(outStr)
+        if(row[5] != None and row[6] != None):
+            await addReactions(msg, row[5], row[6])
     else:
         await bot.say("Kein Gif zu '%s' gefunden.\nStattdessen gibt es :cake:." % search)        
 
@@ -878,12 +880,20 @@ async def searchgif(searchterm : str = ""):
 @bot.command(pass_context=True)
 async def deletegif(ctx, id):
     """Löscht ein Gif mit der angegebenen ID. Kann nur vom ersteller gelöscht werden."""
-    gifsCur.execute("""Select addedBy, url from gifs
+    gifsCur.execute("""Select addedBy, url, messageId, channelId from gifs
                         where ROWID = """ + id)
     row = gifsCur.fetchone()
     
     if(row != None):
         if(str(ctx.message.author) == str(row[0])):
+            # delete original message if possible
+            if(row[2] != None and row[3] != None):
+                print("deleting message")
+                channel = discord.utils.get(bot.get_all_channels(), id=row[3])
+                origMsg = await bot.get_message(channel, row[2])
+                await bot.delete_message(origMsg)
+                print("deleted message")
+        
             # TODO: combo gifs löschen
             gifsCur.execute("""Delete from gifs
                                 where ROWID = """ + id)
@@ -892,6 +902,7 @@ async def deletegif(ctx, id):
                 pollfile.write("Deleting gif #" + row[0] + " - " + row[1])
                 pollfile.write("\n")
             await bot.say("Gif #" + id + " gelöscht :put_litter_in_its_place: ")
+            
         else:
             await bot.say(":no_entry_sign: " + ctx.message.author.mention + " Du bist nicht berechtigt Gif #" + id +" zu löschen :no_entry_sign:")
     else:
@@ -947,6 +958,12 @@ async def testMsgReaction():
         print(reaction.emoji)
         print(reaction.count)
         
+    print("test")
+    emojis=bot.get_all_emojis()
+    print(emojis)
+    for emoji in emojis:
+        print(emoji)
+        
 #@bot.command(pass_context=True)
 async def msgStat(ctx):
     #cache_msg = discord.utils.get(bot.messages, id=510217606599409704)
@@ -981,7 +998,7 @@ async def testGetResult():
     print("Die Rammerdestages sind: %s" % winners)
     
 #@bot.command()
-async def gifOfTheWeek():
+async def gifOfTheMonth():
     """ posts the gif with the most upvotes to some predefined channels """
     postTo = {}
     # this is hardcoded atm. maybe i'll move this to a config file in the future .. but probably not
@@ -989,15 +1006,18 @@ async def gifOfTheWeek():
     postTo["Unterwasserpyromanen"] = "bot-ecke"
     gifsOfTheWeek = []
     gifOfTheWeek = []
+    mostReactionsOTM = []
     mostVotes = 0
+    mostReactions = 0
     
     # find the gif of the current week
     for gif in gifsCur.execute("""Select game, comment, addedBy, date(addedOn), messageId, channelId, ROWID, url """ +
                     """from gifs """+
-                    """where date(addedOn) > date('now', '-7 day')"""):
+                    """where date(addedOn) >  date(date('now', '-2 day'), '-1 month')"""):
         if(gif[4] != None and gif[5] != None):
             gifChannel = discord.utils.get(bot.get_all_channels(), id=gif[5])
             cache_msg = await bot.get_message(gifChannel, gif[4])
+            reactionCount = 0
             for reaction in cache_msg.reactions:
                 if(reaction.emoji == '👍'):
                     if(reaction.count > mostVotes):
@@ -1006,15 +1026,21 @@ async def gifOfTheWeek():
                     
                     if(reaction.count == mostVotes):
                         gifsOfTheWeek.append(gif)
-                        
+                #print("message: " + str(cache_msg) + " - #reactions: " + str(len(cache_msg.reactions)) + " - reactions: ") 
+                reactionCount += reaction.count
+            if(reactionCount > mostReactions):
+                mostReactionsOTM = []
+                mostReactions = reactionCount
+            if(reactionCount == mostReactions):
+                mostReactionsOTM.append(gif)
     
     msg = ""
     if(len(gifsOfTheWeek) == 0):
-        msg = "Diese Woche gibt es leider kein Gif der Woche :("
+        msg = "Dieses mal gibt es leider kein Gif des Monats :("
     if(len(gifsOfTheWeek) > 1):
         gifOfTheWeek = random.choice(gifsOfTheWeek)
 
-        msg="Diese Woche gab es einen Gleichstand zwischen den Gifs "
+        msg="Diesen Monat gab es einen Gleichstand zwischen den Gifs "
         first = True
         for gif in gifsOfTheWeek:
             if(first):
@@ -1025,7 +1051,7 @@ async def gifOfTheWeek():
     else:
         gifOfTheWeek = gifsOfTheWeek[0]
 
-    with open("gifsOfTheWeek.txt", "a") as gotwfile:
+    with open("gifsOfTheMonth.txt", "a") as gotwfile:
         gotwfile.write(datetime.datetime.today().date().isoformat())
         gotwfile.write(":")
         if(len(gifOfTheWeek) > 0):
@@ -1039,37 +1065,61 @@ async def gifOfTheWeek():
         if(channel.server.name in postTo):
             # find the correct channel
             if(postTo[channel.server.name] == channel.name):
-                await bot.send_message(channel, "**GIF DER WOCHE**")
+                await bot.send_message(channel, "**GIF DES MONATS**")
                 if(msg != ""):
                     await bot.send_message(channel, msg)
-                await bot.send_message(channel, "Das Gif der Woche mit "+ str(mostVotes) +" upvotes ist Gif #"+str(gifOfTheWeek[6]))
-                gifMsg = formatGif(gifOfTheWeek[7], gifOfTheWeek[0], gifOfTheWeek[1], gifOfTheWeek[2], gifOfTheWeek[6])
-                await bot.send_message(channel, gifMsg)
-                
 
-async def gifOfTheWeekScheduler():
+                # Gif of the Month (most upvotes)
+                await bot.send_message(channel, "Das Gif des Monats mit "+ str(mostVotes) +" 👍 ist Gif #"+str(gifOfTheWeek[6]))
+                gifMsg = formatGif(gifOfTheWeek[7], gifOfTheWeek[0], gifOfTheWeek[1], gifOfTheWeek[2], gifOfTheWeek[6])
+                gotmMsg = await bot.send_message(channel, gifMsg)
+                await addReactions(gotmMsg, gifOfTheWeek[4], gifOfTheWeek[5])
+                mostReactionsWinner=mostReactionsOTM[0]
+                # Most Reactions
+                await bot.send_message(channel, "Das Gif mit den meisten Reaktionen des Monats ist Gif #"+str(mostReactionsWinner[6]) + " mit " + str(mostReactions) + " Reaktionen!")
+                gifMsg = formatGif(mostReactionsWinner[7], mostReactionsWinner[0], mostReactionsWinner[1], mostReactionsWinner[2], mostReactionsWinner[6])
+                mostReactionsMsg = await bot.send_message(channel, gifMsg)
+                await addReactions(mostReactionsMsg, mostReactionsWinner[4], mostReactionsWinner[5])
+
+async def addReactions(msg, origMsgId, channelId):
+    channel = discord.utils.get(bot.get_all_channels(), id=channelId)
+    origMsg = await bot.get_message(channel, origMsgId)
+    for reaction in origMsg.reactions:
+        try:
+            await bot.add_reaction(msg, reaction.emoji)
+        except:
+            print("unknown reaction: " + str(reaction.emoji))
+    
+                        
+async def gifOfTheMonthScheduler():
     await bot.wait_until_ready()
     while not bot.is_closed:
         now = datetime.datetime.today()
-        if(now.weekday() == 6): # sunday
-            if(now.hour == 22): # at 22 o clock (raspi is running an hour earlier so 23 o clock)
-                postGotf = True
-                with open("gifsOfTheWeek.txt", "r") as gotwfile:
-                    lines = gotwfile.readlines()
+        if(now.day == 3): # 3rd day of the month
+            if(now.hour == 13): # at 13 o clock (raspi is running an hour earlier so actually 12:00 cet)
+                postGotm = True
+                with open("gifsOfTheMonth.txt", "r") as gotmfile:
+                    lines = gotmfile.readlines()
                     for line in lines:
                         lineDate=line.split(":")[0]
                         try:
                             if(datetime.datetime.strptime(str(lineDate),'%Y-%m-%d').date() == now.date()):
                                 # skip because it has already been posted
-                                postGotf = False
+                                postGotm = False
                         except:
                             print("ignore parse error")
-                if(postGotf):
-                    await gifOfTheWeek()
-                await asyncio.sleep(3600) # sleep for an hour
-            else:
-                print("test3")
-                await asyncio.sleep(3600) # sleep for an hour
+                if(postGotm):
+                    await gifOfTheMonth()
+                else:
+                    print("Already postet GOTM")
+                #await asyncio.sleep(3600) # sleep for an hour
+            #else:
+                #await asyncio.sleep(3600) # sleep for an hour
+        else:
+            print("wrong date for gif of the month: " + str(now))
+            
+        await asyncio.sleep(3600) # always sleep for an hour
+    print("something went wrong in gif of the month")
                 
-bot.loop.create_task(gifOfTheWeekScheduler())
+bot.loop.create_task(gifOfTheMonthScheduler())
 bot.run(token())
