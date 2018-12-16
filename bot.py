@@ -604,6 +604,7 @@ async def updategta(delete : bool = False, create : bool = False):
 
 @bot.command(pass_context=True)
 async def rammerdestages(ctx, chan:str = "GTA", extraOptions:str = "", hours : int = 2):
+    """Startet einen Strawpoll Vote für den Rammer des Tages. Verwendet werden dafür alle User des angegebenen Voicechannels"""
     now = datetime.datetime.now()
     api = strawpoll.API()
     options = []
@@ -766,14 +767,17 @@ def formatGif(url, game, comment, addedBy, id):
         
 @bot.command(aliases=["gifs", "showgif", "gyf"])
 async def gif(search : str = ""):
-    """Zeigt ein Gif aus der Datenbank an"""
+    """Zeigt ein Gif aus der Datenbank an.
+    Wird ein Suchbegriff angegeben, wird zu diesem Begriff ein zufälliges Gif ausgewählt.
+    Ist der Suchbegriff eine Zahl, wird das Gif mit der ID dieser Zahl ausgegeben.
+    Wird kein Suchbegriff angegeben, wird ein zufälliges Gif angezeigt."""
     # Search for addedBy, game and comment
     
     try:
         # id suche
         id = int(search)
         gifsCur.execute("""SELECT url, game, comment, addedBy, ROWID, messageId, channelId from gifs
-                            WHERE ROWID = """ + search)
+                            WHERE ROWID = """ + id)
     except ValueError:
         # string suche
         gifsCur.execute("""SELECT url, game, comment, addedBy, ROWID, messageId, channelId from gifs
@@ -801,24 +805,24 @@ async def gifstats():
     
     s = '```ml\n'
     s += "Anzahl an Gifs: %s\n\n" % row[0]
-    s += "| {:<30.19}| {:8s}|\n".format("User","Anzahl")
+    s += "| {:<30.29}| {:8s}|\n".format("User","Anzahl")
     s += ('-' * 43)
     s += "\n"
     for row in gifsCur.execute("""SELECT addedBy, count(*)
                         from gifs
                         group by addedBy
                         order by 2 desc"""):
-        s += "| {:<30.19}| {:<8}|\n".format(row[0].split("#")[0], row[1])
+        s += "| {:<30.29}| {:<8}|\n".format(row[0].split("#")[0], row[1])
     s += '```\n'
     s += '```ml\n'
-    s += "| {:<30.19}| {:8s}|\n".format("Spiel","Anzahl")
+    s += "| {:<30.29}| {:8s}|\n".format("Spiel","Anzahl")
     s += ('-' * 43)
     s += "\n"
     for row in gifsCur.execute("""SELECT game, count(*)
                         from gifs
                         group by game
                         order by 2 desc"""):
-        s += "| {:<30.19}| {:<8}|\n".format(row[0].split("#")[0], row[1])
+        s += "| {:<30.29}| {:<8}|\n".format(row[0].split("#")[0], row[1])
     s += '```'
     await bot.say(s)
     
@@ -1091,12 +1095,13 @@ async def addReactions(msg, origMsgId, channelId):
             print("unknown reaction: " + str(reaction.emoji))
     
                         
-async def gifOfTheMonthScheduler():
+async def eventScheduler():
+    """This scheduler runs every hour"""
     await bot.wait_until_ready()
     while not bot.is_closed:
         now = datetime.datetime.today()
-        if(now.day == 3): # 3rd day of the month
-            if(now.hour == 13): # at 13 o clock (raspi is running an hour earlier so actually 12:00 cet)
+        if(now.day == 3): # gif of the month - 3rd day of the month
+            if(now.hour == 12): # at 12:00
                 postGotm = True
                 with open("gifsOfTheMonth.txt", "r") as gotmfile:
                     lines = gotmfile.readlines()
@@ -1115,11 +1120,17 @@ async def gifOfTheMonthScheduler():
                 #await asyncio.sleep(3600) # sleep for an hour
             #else:
                 #await asyncio.sleep(3600) # sleep for an hour
+        
+        elif(now.weekday == 3): # gta thursday
+            if(now.hour == 20): # at 20:00
+                await bot.change_presence(game=discord.Game(name="GTA Donnerstag"))
+            if(now.hour == 23): # turn off at 23:00
+                await bot.change_presence(game=discord.Game(name=""))
         else:
-            print("wrong date for gif of the month: " + str(now))
+            print("[" + str(now) + "] nothing scheduled")
             
         await asyncio.sleep(3600) # always sleep for an hour
     print("something went wrong in gif of the month")
-                
-bot.loop.create_task(gifOfTheMonthScheduler())
+
+bot.loop.create_task(eventScheduler())
 bot.run(token())
