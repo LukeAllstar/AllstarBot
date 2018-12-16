@@ -274,7 +274,7 @@ class Gta:
                         Select count(*)
                         from playerstats
                         where playername = LOWER('"""+player+"""')
-                        and rank = (Select min(rank) from playerstats where playername = LOWER('"""+player+"""'))"""):
+                        and rank = 1"""):
             embed.add_field(name="Playlisten gewonnen", value="**"+str(row[0])+"**", inline=True)
 
         # Anzahl Rennen

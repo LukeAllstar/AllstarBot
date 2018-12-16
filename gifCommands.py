@@ -103,8 +103,9 @@ class Gif:
         
         try:
             # id suche
+            id = int(search)
             self.gifsCur.execute("""SELECT url, game, comment, addedBy, ROWID, messageId, channelId from gifs
-                                WHERE ROWID = """ + search)
+                            WHERE ROWID = """ + search)
         except ValueError:
             # string suche
             self.gifsCur.execute("""SELECT url, game, comment, addedBy, ROWID, messageId, channelId from gifs
