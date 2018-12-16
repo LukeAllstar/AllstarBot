@@ -129,7 +129,7 @@ class Gta:
 
     @commands.command()
     async def gtaracewins(self,player : str = None):
-        """Anzahl der Siege eines Spielers"""
+        """Anzahl der Rennsiege eines Spielers"""
         #Returns the number of race wins of a player
         if player == None:
             await self.bot.say('```!gtaracewins <player>```')
@@ -150,28 +150,10 @@ class Gta:
         s += ('-' * 33)
         s += "\n"
         for row in self.gtaCur.execute("""
-                        Select playername, count(*) as wins from
-                            ( Select * from
-                                ( Select playlistid, x.name as playlistname, player.name as playername, sum(points) as points from
-                                    ( Select *,
-                                            CASE
-                                            WHEN isdsq = 'True' OR isdnf = 'True' THEN 0
-                                            WHEN rank = 1 THEN 15
-                                            WHEN rank = 2 THEN 12
-                                            WHEN rank = 3 THEN 10
-                                            WHEN rank BETWEEN 4 AND 10 THEN 12 - rank
-                                            ELSE 1
-                                            END as points from
-                                        playlist
-                                        join race on race.playlistid = playlist.rowid
-                                        join raced on raced.raceid = race.rowid
-                                    ) as x
-                                    join player on playerid = player.rowid
-                                        group by playlistid, x.name, playername
-                                        order by playlistid asc, points desc
-                                ) group by playlistid
-                                having max(points)
-                            ) group by playername
+                        Select playername, count(playername) as wins
+                        from playerstats
+                        where rank = 1
+                        group by playername
                         order by wins desc"""):
             s += '| {:20s}| {:8s}|\n'.format(str(row[0]), str(row[1]))
         s += '```'
@@ -275,82 +257,121 @@ class Gta:
 
     @commands.command()
     async def gtaplayerstats(self, player : str):
+        """Diverse Statistiken zu dem Spieler.
+            Der angegebene Spieler muss so geschrieben sein, wie der GTA ingame Nickname."""
         first = True
-        s = "```ml\n"
-        s += "Statistiken für %s\n" % player
+        embed = discord.Embed(title="**Statistiken für " + player + "**", colour=discord.Colour(0xf59402), timestamp=datetime.datetime.utcnow())
+
+        # Anzahl Playlisten
         for row in self.gtaCur.execute("""
-                        Select playlistname, rank
+                        Select count(*)
+                        from playerstats
+                        where playername = LOWER('"""+player+"""')"""):
+            embed.add_field(name="Anzahl Playlisten", value="**"+str(row[0])+"**", inline=True)
+
+        # Playlisten gewonnen
+        for row in self.gtaCur.execute("""
+                        Select count(*)
                         from playerstats
                         where playername = LOWER('"""+player+"""')
                         and rank = (Select min(rank) from playerstats where playername = LOWER('"""+player+"""'))"""):
-            if(first):
-                s += "Bester Rang: "
-                s += str(row[1])
-                s += "\n    in diesen Playlisten: "
-            else:
-                s += ", "            
-            s += str(row[0])
-            first = False
+            embed.add_field(name="Playlisten gewonnen", value="**"+str(row[0])+"**", inline=True)
 
-        s += "\n"
-        first = True
-        
-        # Schlechtester Rang
+        # Anzahl Rennen
         for row in self.gtaCur.execute("""
-                        Select playlistname, rank
-                        from playerstats
-                        where playername = LOWER('"""+player+"""')
-                        and rank = (Select max(rank) from playerstats where playername = LOWER('"""+player+"""'))"""):
-            if(first):
-                s += "Schlechtester Rang: "
-                s += str(row[1])
-                s += "\n    in diesen Playlisten: "
-            else:
-                s += ", "            
-            s += str(row[0])
-            first = False
-            
-        s += "\n"
-        first = True
-        
+                        Select count(*)
+                        from player
+                        join raced on player.ROWID = raced.playerid
+                        where player.name = LOWER('"""+player+"""')"""):
+            embed.add_field(name="Anzahl Rennen", value="**"+str(row[0])+"**", inline=True)
+
+        # Rennen gewonnen
+        for row in self.gtaCur.execute("""
+                            Select COALESCE(count(*),0), player.name
+                                from raced
+                                join player on player.rowid = raced.playerid
+                                where rank = 1 AND
+                                        LOWER(player.name) like '%""" + player + """%'"""):
+            embed.add_field(name="Rennen Gewonnen", value="**"+str(row[0])+"**", inline=True)
+
         # Beste Punktezahl
+        mostPoints = 0
+        mostPointsPlaylists = ""
+        first = True
         for row in self.gtaCur.execute("""
                         Select playlistname, points
                         from playerstats
                         where playername = LOWER('"""+player+"""')
                         and points = (Select max(points) from playerstats where playername = LOWER('"""+player+"""'))"""):
             if(first):
-                s += "Meiste Punkte: "
-                s += str(row[1])
-                s += "\n    in diesen Playlisten: "
+                mostPoints = row[1]
             else:
-                s += ", "            
-            s += str(row[0])
+                mostPointsPlaylists += ", "            
+            mostPointsPlaylists += str(row[0])
             first = False
-        
-        s += "\n"
-        first = True
+        embed.add_field(name="Meisten Punkte", value="**" + str(mostPoints) + "** (in ``" + mostPointsPlaylists + "``)", inline=True)
             
         # Schlechteste Punktezahl
+        first = True
+        leastPoints = 0
+        leastPointsPlaylists = ""
         for row in self.gtaCur.execute("""
                         Select playlistname, points
                         from playerstats
                         where playername = LOWER('"""+player+"""')
                         and points = (Select min(points) from playerstats where playername = LOWER('"""+player+"""'))"""):
             if(first):
-                s += "Wenigste Punkte: "
-                s += str(row[1])
-                s += "\n    in diesen Playlisten: "
+                leastPoints = row[1]
             else:
-                s += ", "            
-            s += str(row[0])
-            first = False
-        
-        s += "\n"
+                leastPointsPlaylists += ", "            
+            leastPointsPlaylists += str(row[0])
+            first = False   
+        embed.add_field(name="Wenigste Punkte", value="**" + str(leastPoints) + "** (in ``" + leastPointsPlaylists + "``)", inline=True)
+
+        # Bester Rang
+        for row in self.gtaCur.execute("""Select playername, count(playername) as wins
+                        from playerstats
+                        where rank = 1
+                            AND playername = LOWER('"""+player+"""')
+                        group by playername
+                        order by wins desc"""):
+            numberwins = row[1]
+
         first = True
+        bestPlaylists = ""
+        for row in self.gtaCur.execute("""
+                        Select playlistname, rank
+                        from playerstats
+                        where playername = LOWER('"""+player+"""')
+                        and rank = (Select min(rank) from playerstats where playername = LOWER('"""+player+"""'))"""):
+            if(first):
+                #s += "Bester Rang: "
+                #s += str(row[1])
+                #s += "\n    in diesen " + str(numberwins) + " Playlisten: "
+                embed.add_field(name="Bester Rang", value="**"+str(row[1])+"**", inline=False)
+            else:
+                bestPlaylists += ", "            
+            bestPlaylists += str(row[0])
+            first = False
+        embed.add_field(name="Bester Rang in diesen Playlisten", value ="``" + bestPlaylists + "``")
         
-        s+= "\n```"
-        await self.bot.say(s)
+        # Schlechtester Rang
+        worstPlaylists = ""
+        first = True
+        for row in self.gtaCur.execute("""
+                        Select playlistname, rank
+                        from playerstats
+                        where playername = LOWER('"""+player+"""')
+                        and rank = (Select max(rank) from playerstats where playername = LOWER('"""+player+"""'))"""):
+            if(first):
+                embed.add_field(name="Schlechtester Rang", value="**" + str(row[1]) + "** ", inline=False)
+            else:
+                worstPlaylists += ", "            
+            worstPlaylists += str(row[0])
+            first = False
+        embed.add_field(name="Schlechtester Rang in diesen Playlisten", value ="``" + worstPlaylists + "``")
+
+        await self.bot.say(embed=embed)
 
     @commands.command()
     async def updategta(self, delete : bool = False, create : bool = False):
