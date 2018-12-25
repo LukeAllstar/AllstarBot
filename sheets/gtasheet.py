@@ -266,12 +266,12 @@ class Gtasheet:
     def insertPlaylist(self, name, date):
         # Date conversion needed: https://developers.google.com/sheets/api/guides/concepts#datetime_serial_numbers
         try:
-            calcDate = str(datetime.datetime(1899,12,30) + datetime.timedelta(days=int(date)))
+            calcDate = (datetime.datetime(1899,12,30) + datetime.timedelta(days=int(date))).isoformat()
         except Exception:
             calcDate = ''
         print("Inserting %s at date %s" % (name, calcDate))
         self.cur.execute("""INSERT INTO playlist(name, date)
-                            VALUES('"""+name+"""', strftime('%d.%m.%Y','""" + calcDate + """'))""")
+                            VALUES('"""+name+"""', '""" + calcDate + """')""")
     
 
     def checkPlayer(self, playername):
