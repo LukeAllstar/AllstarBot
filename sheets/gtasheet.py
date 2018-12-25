@@ -9,6 +9,7 @@ from oauth2client import client
 from oauth2client.client import OAuth2WebServerFlow
 from oauth2client import tools
 from oauth2client.file import Storage
+import datetime
 
 class Gtasheet:
     conn = None
@@ -263,9 +264,14 @@ class Gtasheet:
         self.end()
 
     def insertPlaylist(self, name, date):
-        #print("Inserting %s at date %s" % (name, date))
+        # Date conversion needed: https://developers.google.com/sheets/api/guides/concepts#datetime_serial_numbers
+        try:
+            calcDate = str(datetime.datetime(1899,12,30) + datetime.timedelta(days=int(date)))
+        except Exception:
+            calcDate = ''
+        print("Inserting %s at date %s" % (name, calcDate))
         self.cur.execute("""INSERT INTO playlist(name, date)
-                            VALUES('"""+name+"""', strftime('%d.%m.%Y','"""+str(date)+"""'))""")
+                            VALUES('"""+name+"""', strftime('%d.%m.%Y','""" + calcDate + """'))""")
     
 
     def checkPlayer(self, playername):
