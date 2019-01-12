@@ -42,6 +42,7 @@ gifsConn = sqlite3.connect('db/gifs.db')
 
 quotesCur = quotesConn.cursor()
 gifsCur = gifsConn.cursor()
+gifs = Gif(bot)
 
 try:
     locale.setlocale(locale.LC_ALL, 'German_Germany')
@@ -211,91 +212,7 @@ async def testGetResult():
         i = i + 1
     
     print("Die Rammerdestages sind: %s" % winners)
-    
-#@bot.command()
-async def gifOfTheMonth():
-    """ posts the gif with the most upvotes to some predefined channels """
-    postTo = {}
-    # this is hardcoded atm. maybe i'll move this to a config file in the future .. but probably not
-    postTo["Lukes Playground"] = "test"
-    postTo["Unterwasserpyromanen"] = "bot-ecke"
-    gifsOfTheWeek = []
-    gifOfTheWeek = []
-    mostReactionsOTM = []
-    mostVotes = 0
-    mostReactions = 0
-    
-    # find the gif of the current week
-    for gif in gifsCur.execute("""Select game, comment, addedBy, date(addedOn), messageId, channelId, ROWID, url """ +
-                    """from gifs """+
-                    """where date(addedOn) >  date(date('now', '-2 day'), '-1 month')"""):
-        if(gif[4] != None and gif[5] != None):
-            gifChannel = discord.utils.get(bot.get_all_channels(), id=gif[5])
-            cache_msg = await bot.get_message(gifChannel, gif[4])
-            reactionCount = 0
-            for reaction in cache_msg.reactions:
-                if(reaction.emoji == '👍'):
-                    if(reaction.count > mostVotes):
-                        gifsOfTheWeek = []
-                        mostVotes = reaction.count
-                    
-                    if(reaction.count == mostVotes):
-                        gifsOfTheWeek.append(gif)
-                #print("message: " + str(cache_msg) + " - #reactions: " + str(len(cache_msg.reactions)) + " - reactions: ") 
-                reactionCount += reaction.count
-            if(reactionCount > mostReactions):
-                mostReactionsOTM = []
-                mostReactions = reactionCount
-            if(reactionCount == mostReactions):
-                mostReactionsOTM.append(gif)
-    
-    msg = ""
-    if(len(gifsOfTheWeek) == 0):
-        msg = "Dieses mal gibt es leider kein Gif des Monats :("
-    if(len(gifsOfTheWeek) > 1):
-        gifOfTheWeek = random.choice(gifsOfTheWeek)
-
-        msg="Diesen Monat gab es einen Gleichstand zwischen den Gifs "
-        first = True
-        for gif in gifsOfTheWeek:
-            if(first):
-                first = False
-            else:
-                msg += ", "
-            msg += "#"+str(gif[6])
-    else:
-        gifOfTheWeek = gifsOfTheWeek[0]
-
-    with open("gifsOfTheMonth.txt", "a") as gotwfile:
-        gotwfile.write(datetime.datetime.today().date().isoformat())
-        gotwfile.write(":")
-        if(len(gifOfTheWeek) > 0):
-            gotwfile.write(str(gifOfTheWeek[6]))
-        else:
-            gotwfile.write("none")
-        gotwfile.write("\n")
-        
-    # now post it to every channel that was configured
-    for channel in bot.get_all_channels():
-        if(channel.server.name in postTo):
-            # find the correct channel
-            if(postTo[channel.server.name] == channel.name):
-                await bot.send_message(channel, "**GIF DES MONATS**")
-                if(msg != ""):
-                    await bot.send_message(channel, msg)
-
-                # Gif of the Month (most upvotes)
-                await bot.send_message(channel, "Das Gif des Monats mit "+ str(mostVotes) +" 👍 ist Gif #"+str(gifOfTheWeek[6]))
-                gifMsg = Gif.formatGif(gifOfTheWeek[7], gifOfTheWeek[0], gifOfTheWeek[1], gifOfTheWeek[2], gifOfTheWeek[6])
-                gotmMsg = await bot.send_message(channel, gifMsg)
-                await Gif.addReactions(gotmMsg, gifOfTheWeek[4], gifOfTheWeek[5])
-                mostReactionsWinner=mostReactionsOTM[0]
-                # Most Reactions
-                await bot.send_message(channel, "Das Gif mit den meisten Reaktionen des Monats ist Gif #"+str(mostReactionsWinner[6]) + " mit " + str(mostReactions) + " Reaktionen!")
-                gifMsg = Gif.formatGif(mostReactionsWinner[7], mostReactionsWinner[0], mostReactionsWinner[1], mostReactionsWinner[2], mostReactionsWinner[6])
-                mostReactionsMsg = await bot.send_message(channel, gifMsg)
-                await Gif.addReactions(mostReactionsMsg, mostReactionsWinner[4], mostReactionsWinner[5])
-                        
+                       
 async def eventScheduler():
     """This scheduler runs every hour"""
     await bot.wait_until_ready()
@@ -315,7 +232,7 @@ async def eventScheduler():
                         except:
                             print("ignore parse error")
                 if(postGotm):
-                    await gifOfTheMonth()
+                    await gifs.gifOfTheMonth()
                 else:
                     print("Already postet GOTM")
                 #await asyncio.sleep(3600) # sleep for an hour
@@ -337,5 +254,5 @@ bot.loop.create_task(eventScheduler())
 bot.add_cog(Gta(bot))
 # Tabletop Commands werden aktuell nicht mehr unterstützt
 #bot.add_cog(Tabletop(bot))
-bot.add_cog(Gif(bot))
+bot.add_cog(gifs)
 bot.run(token())

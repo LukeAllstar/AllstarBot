@@ -51,18 +51,18 @@ class Gif:
                 await asyncio.sleep(6)
                 await self.bot.delete_message(message)
 
-    def formatGifWithId(self, id : int):
+    def formatGifWithId(self, gifid : int):
         self.gifsCur.execute("""SELECT url, game, comment, addedBy, ROWID from gifs
-                                WHERE ROWID = %s""" % (id))
+                                WHERE ROWID = %s""" % (gifid))
         row = self.gifsCur.fetchone()
         return self.formatGif(row[0], row[1], row[2], row[3], row[4])
         
-    def formatGif(self, url, game, comment, addedBy, id):
+    def formatGif(self, url, game, comment, addedBy, gifid):
         outStr = '```ml\n'
         if(comment != ""):
-            outStr += '#%d: "%s"\n' % (id, comment)
+            outStr += '#%d: "%s"\n' % (gifid, comment)
         else:
-            outStr += '#%d \n' % (id)
+            outStr += '#%d \n' % (gifid)
         
         if(game != ""):
             outStr += "Spiel: " + game + "\n" 
@@ -76,8 +76,8 @@ class Gif:
         # search for combo gifs
         for comboRow in self.gifsCur.execute("""Select id1, id2 from comboGifs
                                             where id2 = %s
-                                            OR id1 = %s""" % (id, id)):
-            if comboRow[0] == id:
+                                            OR id1 = %s""" % (gifid, gifid)):
+            if comboRow[0] == gifid:
                 comboId = comboRow[1]
             else:
                 comboId = comboRow[0]
@@ -248,3 +248,87 @@ class Gif:
                 await self.bot.add_reaction(msg, reaction.emoji)
             except:
                 print("unknown reaction: " + str(reaction.emoji))
+
+
+    async def gifOfTheMonth(self):
+        """ posts the gif with the most upvotes to some predefined channels """
+        postTo = {}
+        # this is hardcoded atm. maybe i'll move this to a config file in the future .. but probably not
+        postTo["Lukes Playground"] = "test"
+        postTo["Unterwasserpyromanen"] = "bot-ecke"
+        gifsOfTheWeek = []
+        gifOfTheWeek = []
+        mostReactionsOTM = []
+        mostVotes = 0
+        mostReactions = 0
+        
+        # find the gif of the current week
+        for gif in self.gifsCur.execute("""Select game, comment, addedBy, date(addedOn), messageId, channelId, ROWID, url """ +
+                        """from gifs """+
+                        """where date(addedOn) >  date(date('now', '-2 day'), '-1 month')"""):
+            if(gif[4] != None and gif[5] != None):
+                gifChannel = discord.utils.get(self.bot.get_all_channels(), id=gif[5])
+                cache_msg = await self.bot.get_message(gifChannel, gif[4])
+                reactionCount = 0
+                for reaction in cache_msg.reactions:
+                    if(reaction.emoji == '👍'):
+                        if(reaction.count > mostVotes):
+                            gifsOfTheWeek = []
+                            mostVotes = reaction.count
+                        
+                        if(reaction.count == mostVotes):
+                            gifsOfTheWeek.append(gif)
+                    #print("message: " + str(cache_msg) + " - #reactions: " + str(len(cache_msg.reactions)) + " - reactions: ") 
+                    reactionCount += reaction.count
+                if(reactionCount > mostReactions):
+                    mostReactionsOTM = []
+                    mostReactions = reactionCount
+                if(reactionCount == mostReactions):
+                    mostReactionsOTM.append(gif)
+        
+        msg = ""
+        if(len(gifsOfTheWeek) == 0):
+            msg = "Dieses mal gibt es leider kein Gif des Monats :("
+        if(len(gifsOfTheWeek) > 1):
+            gifOfTheWeek = random.choice(gifsOfTheWeek)
+
+            msg="Diesen Monat gab es einen Gleichstand zwischen den Gifs "
+            first = True
+            for gif in gifsOfTheWeek:
+                if(first):
+                    first = False
+                else:
+                    msg += ", "
+                msg += "#"+str(gif[6])
+        else:
+            gifOfTheWeek = gifsOfTheWeek[0]
+
+        with open("gifsOfTheMonth.txt", "a") as gotwfile:
+            gotwfile.write(datetime.datetime.today().date().isoformat())
+            gotwfile.write(":")
+            if(len(gifOfTheWeek) > 0):
+                gotwfile.write(str(gifOfTheWeek[6]))
+            else:
+                gotwfile.write("none")
+            gotwfile.write("\n")
+            
+        # now post it to every channel that was configured
+        for channel in self.bot.get_all_channels():
+            if(channel.server.name in postTo):
+                # find the correct channel
+                if(postTo[channel.server.name] == channel.name):
+                    await self.bot.send_message(channel, "**GIF DES MONATS**")
+                    if(msg != ""):
+                        await self.bot.send_message(channel, msg)
+
+                    # Gif of the Month (most upvotes)
+                    await self.bot.send_message(channel, "Das Gif des Monats mit "+ str(mostVotes) +" 👍 ist Gif #"+str(gifOfTheWeek[6]))
+                    gifMsg = self.formatGifWithId(gifOfTheWeek[6])
+                    gotmMsg = await self.bot.send_message(channel, gifMsg)
+                    await self.addReactions(gotmMsg, gifOfTheWeek[4], gifOfTheWeek[5])
+                    mostReactionsWinner=mostReactionsOTM[0]
+                    # Most Reactions
+                    await self.bot.send_message(channel, "Das Gif mit den meisten Reaktionen des Monats ist Gif #"+str(mostReactionsWinner[6]) + " mit " + str(mostReactions) + " Reaktionen!")
+                    gifMsg = self.formatGifWithId(mostReactionsWinner[6])
+                    mostReactionsMsg = await self.bot.send_message(channel, gifMsg)
+                    await self.addReactions(mostReactionsMsg, mostReactionsWinner[4], mostReactionsWinner[5])
