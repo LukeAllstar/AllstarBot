@@ -250,6 +250,17 @@ async def eventScheduler():
         await asyncio.sleep(3600) # always sleep for an hour
     print("something went wrong in gif of the month")
 
+@bot.command()
+async def pointezeit(time = ""):
+    userPointe = discord.utils.get(bot.get_all_members(), id='368113080741265408')
+    msg = "Juhu, "
+    if userPointe == None:
+        msg += "Pointeblanc"
+    else:
+        msg += userPointe.mention
+    msg += " ist hier! Jetzt geht die Party ab!"
+    await bot.say(msg) 
+
 bot.loop.create_task(eventScheduler())
 bot.add_cog(Gta(bot))
 # Tabletop Commands werden aktuell nicht mehr unterstützt
