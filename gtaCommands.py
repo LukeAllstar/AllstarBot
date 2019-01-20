@@ -394,3 +394,14 @@ class Gta:
             self.gtaCur = self.gtaConn.cursor()
         except Exception as e:
             print(e)
+
+    @commands.command()
+    async def pointezeit(self, time = ""):
+        userPointe = discord.utils.get(self.bot.get_all_members(), id='368113080741265408')
+        msg = "Juhu, "
+        if userPointe == None:
+            msg += "Pointeblanc"
+        else:
+            msg += userPointe.mention
+        msg += " ist hier! Jetzt geht die Party ab!"
+        await self.bot.say(msg) 

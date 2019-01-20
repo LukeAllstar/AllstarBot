@@ -38,17 +38,12 @@ bot = commands.Bot(command_prefix=data["command_prefix"], description=data["desc
 #bot.remove_command("help")
 
 quotesConn = sqlite3.connect('db/quotes.db')
-gifsConn = sqlite3.connect('db/gifs.db')
+botConn = sqlite3.connect('db/bot.db') # general bot db -> quotes should be moved there to
 
 quotesCur = quotesConn.cursor()
-gifsCur = gifsConn.cursor()
+botCur = botConn.cursor()
 gifs = Gif(bot)
 
-try:
-    locale.setlocale(locale.LC_ALL, 'German_Germany')
-except:
-    print("Couldn't set locale")
-  
 @bot.event
 async def on_ready():
     print('Logged in as')
@@ -156,6 +151,102 @@ async def isitthursday():
     else:
         await bot.say("no")
 
+###########################
+### Roles #################
+###########################
+
+@bot.command(pass_context=True, aliases=["joinrole"])
+async def joingroup(ctx, group):
+    member = ctx.message.author
+    botCur.execute("""SELECT server, name from allowedroles 
+                            WHERE server = '""" + member.server.name + """'
+                            AND name = '""" + group + """'
+                            """)
+    row = botCur.fetchone()
+    if(row != None):
+        role = discord.utils.get(member.server.roles, name=group)
+        await bot.add_roles(member, role)
+        await bot.reply("Du wurdest zu Gruppe " + group + " hinzugefügt!")
+    else:
+        await bot.reply("Diese Gruppe ist nicht erlaubt.")
+
+@bot.command(pass_context=True, aliases=["leaverole"])
+async def leavegroup(ctx, group):
+    member = ctx.message.author
+    botCur.execute("""SELECT server, name from allowedroles 
+                            WHERE server = '""" + member.server.name + """'
+                            AND name = '""" + group + """'
+                            """)
+    row = botCur.fetchone()
+    if(row == None):
+        await bot.reply("Diese Gruppe ist nicht erlaubt")
+    elif(group in [y.name.lower() for y in member.roles]):
+        role = discord.utils.get(member.server.roles, name=group)
+        await bot.remove_roles(member, role)
+        await bot.reply("Du wurdest aus der Gruppe " + group + " entfernt!")
+    else:
+        await bot.reply("Du bist nicht in dieser Gruppe")
+
+@bot.command(pass_context=True, aliases=["allowedroles"])
+async def allowedgroups(ctx):
+    member = ctx.message.author
+    msg = "Folgende Gruppen sind erlaubt: \n"
+    for group in botCur.execute("""SELECT name from allowedroles 
+                            WHERE server = '""" + member.server.name + """'
+                            """):
+        msg += group[0]
+        msg += ", "
+    msg = msg[:-2] # remove last comma
+    await bot.say(msg)
+
+@bot.command(pass_context=True, aliases=["addallowedgroup"])
+@commands.has_any_role("Moderator", "Handlanger 👷")
+async def addallowedrole(ctx, group):
+    member = ctx.message.author
+    role = discord.utils.get(member.server.roles, name=group)
+    if(role != None):
+        await addRole(member.server.name, group)
+        await bot.reply("Rolle " + group + " zu den erlaubten Rollen hinzugefügt")
+    else:
+        await bot.reply("Rolle " + group + " existiert nicht")
+
+@bot.command(pass_context=True, aliases=["createallowedgroup"])
+@commands.has_any_role("Moderator", "Handlanger 👷")
+async def createallowedrole(ctx, group):
+    member = ctx.message.author
+    await bot.create_role(member.server, name=group, mentionable=True)
+    await addRole(member.server.name, group)
+    await bot.reply("Rolle " + group + " erstellt und zu den erlaubten Rollen hinzugefügt")
+
+async def addRole(server, role):
+    botCur.execute("""Insert Into allowedroles(server, name)
+                            values('""" + server + """', '""" + role + """') """)
+    botConn.commit()
+
+@bot.command(pass_context=True, aliases=["deleteallowedgroup"])
+@commands.has_any_role("Moderator", "Handlanger 👷")
+async def deleteallowedrole(ctx, group):
+    member = ctx.message.author
+    role = discord.utils.get(member.server.roles, name=group)
+    await deleteRole(member.server.name, group)
+    await bot.delete_role(member.server, role)
+    await bot.reply("Rolle " + group + " aus db und discord entfernt")
+
+@bot.command(pass_context=True, aliases=["removeallowedgroup"])
+@commands.has_any_role("Moderator", "Handlanger 👷")
+async def removeallowedrole(ctx, group):
+    member = ctx.message.author
+    await deleteRole(member.server.name, group)
+    await bot.reply("Rolle " + group + " ist nicht mehr erlaubt (Die Rolle existiert weiterhin in Discord)")
+
+async def deleteRole(server, role):
+    botCur.execute("""Delete from allowedroles
+                        where server = '""" + server + """'
+                        AND name = '""" + role + """'""")
+    botConn.commit()
+
+### END ROLES ###
+
 #@bot.command()
 async def testMsgReaction():
     msg = await bot.say("this is a test")
@@ -250,16 +341,7 @@ async def eventScheduler():
         await asyncio.sleep(3600) # always sleep for an hour
     print("something went wrong in gif of the month")
 
-@bot.command()
-async def pointezeit(time = ""):
-    userPointe = discord.utils.get(bot.get_all_members(), id='368113080741265408')
-    msg = "Juhu, "
-    if userPointe == None:
-        msg += "Pointeblanc"
-    else:
-        msg += userPointe.mention
-    msg += " ist hier! Jetzt geht die Party ab!"
-    await bot.say(msg) 
+
 
 bot.loop.create_task(eventScheduler())
 bot.add_cog(Gta(bot))

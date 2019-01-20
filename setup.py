@@ -22,6 +22,24 @@ def createTabletop(force : bool):
         tts = sheets.Tabletop(True, True, True)
         tts.update_database()
         print("... Finished")
+
+def createBotdb(force : bool):
+    ### Tabletop ###
+    if force == False and os.path.exists('db/bot.db'):
+        print("db/bot.db already exists. Skipping")
+    else:
+        try:
+            print("removing db/bot.db")
+            os.remove('db/bot.db')
+            print("removed db/bot.db")
+        except OSError:
+            pass
+        print("Creating db/bot.db ...")
+        botConn = sqlite3.connect('db/bot.db')
+        botCur = botConn.cursor()
+        botCur.execute('''CREATE TABLE allowedroles(server, name)''')
+        botConn.commit()
+        print("... Finished")
         
 def createQuotes(force : bool):
     ### Quotes ###   
@@ -108,6 +126,13 @@ def setup():
         createGifs(True)
     else:
         createGifs(False)
+
+    ### General Bot db ###
+    if forceArgs != None and ("bot" in forceArgs or "bot" in forceArgs):
+        print("forcing bot")
+        createBotdb(True)
+    else:
+        createBotdb(False)
 
 if __name__ == '__main__':
     setup()
