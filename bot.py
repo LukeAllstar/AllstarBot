@@ -160,13 +160,13 @@ async def joingroup(ctx, group):
     member = ctx.message.author
     botCur.execute("""SELECT server, name from allowedroles 
                             WHERE server = '""" + member.server.name + """'
-                            AND name = '""" + group + """'
+                            AND LOWER(name) = LOWER('""" + group + """')
                             """)
     row = botCur.fetchone()
     if(row != None):
-        role = discord.utils.get(member.server.roles, name=group)
+        role = discord.utils.get(member.server.roles, name=row[1])
         await bot.add_roles(member, role)
-        await bot.reply("Du wurdest zu Gruppe " + group + " hinzugefügt!")
+        await bot.reply("Du wurdest zu Gruppe " + row[1] + " hinzugefügt!")
     else:
         await bot.reply("Diese Gruppe ist nicht erlaubt.")
 
@@ -175,15 +175,15 @@ async def leavegroup(ctx, group):
     member = ctx.message.author
     botCur.execute("""SELECT server, name from allowedroles 
                             WHERE server = '""" + member.server.name + """'
-                            AND name = '""" + group + """'
+                            AND LOWER(name) = LOWER('""" + group + """')
                             """)
     row = botCur.fetchone()
     if(row == None):
         await bot.reply("Diese Gruppe ist nicht erlaubt")
-    elif(group in [y.name.lower() for y in member.roles]):
-        role = discord.utils.get(member.server.roles, name=group)
+    elif(group.lower() in [y.name.lower() for y in member.roles]):
+        role = discord.utils.get(member.server.roles, name=row[1])
         await bot.remove_roles(member, role)
-        await bot.reply("Du wurdest aus der Gruppe " + group + " entfernt!")
+        await bot.reply("Du wurdest aus der Gruppe " + row[1] + " entfernt!")
     else:
         await bot.reply("Du bist nicht in dieser Gruppe")
 
