@@ -191,11 +191,13 @@ async def leavegroup(ctx, group):
 async def checkrole(ctx):
     member = ctx.message.author
     msg = "Du bist derzeit in folgenden Gruppen: \n"
+    
+    memberRoles = [y.name.lower() for y in member.roles]
 
     for group in botCur.execute("""SELECT name from allowedroles 
                                 WHERE server = '""" + member.server.name + """'
                                 """):
-        if (group.lower() in [y.name.lower() for y in member.roles]):
+        if (group.lower() in memberRoles):
             msg += group[0]
             msg += ", "
     msg = msg[:-2] # remove last comma
