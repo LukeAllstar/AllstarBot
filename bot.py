@@ -186,6 +186,20 @@ async def leavegroup(ctx, group):
         await bot.reply("Du wurdest aus der Gruppe " + row[1] + " entfernt!")
     else:
         await bot.reply("Du bist nicht in dieser Gruppe")
+        
+@bot.command(pass_context=True, aliases=["checkrole"])
+async def checkrole(ctx):
+    member = ctx.message.author
+    msg = "Du bist derzeit in folgenden Gruppen: \n"
+
+    for group in botCur.execute("""SELECT name from allowedroles 
+                                WHERE server = '""" + member.server.name + """'
+                                """):
+        if (group.lower() in [y.name.lower() for y in member.roles]):
+            msg += group[0]
+            msg += ", "
+    msg = msg[:-2] # remove last comma
+    await bot.say(msg)
 
 @bot.command(pass_context=True, aliases=["allowedroles"])
 async def allowedgroups(ctx):
