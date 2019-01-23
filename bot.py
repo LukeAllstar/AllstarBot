@@ -156,19 +156,21 @@ async def isitthursday():
 ###########################
 
 @bot.command(pass_context=True, aliases=["joinrole"])
-async def joingroup(ctx, group):
+async def joingroup(ctx, *groups):
     member = ctx.message.author
-    botCur.execute("""SELECT server, name from allowedroles 
-                            WHERE server = '""" + member.server.name + """'
-                            AND LOWER(name) = LOWER('""" + group + """')
-                            """)
-    row = botCur.fetchone()
-    if(row != None):
-        role = discord.utils.get(member.server.roles, name=row[1])
-        await bot.add_roles(member, role)
-        await bot.reply("Du wurdest zu Gruppe " + row[1] + " hinzugefügt!")
-    else:
-        await bot.reply("Diese Gruppe ist nicht erlaubt.")
+    
+    for group in groups:
+        botCur.execute("""SELECT server, name from allowedroles 
+                                WHERE server = '""" + member.server.name + """'
+                                AND LOWER(name) = LOWER('""" + group + """')
+                                """)
+        row = botCur.fetchone()
+        if(row != None):
+            role = discord.utils.get(member.server.roles, name=row[1])
+            await bot.add_roles(member, role)
+            await bot.reply("Du wurdest zu Gruppe " + row[1] + " hinzugefügt!")
+        else:
+            await bot.reply("Die Gruppe '" + group + "' ist nicht erlaubt.")
 
 @bot.command(pass_context=True, aliases=["leaverole"])
 async def leavegroup(ctx, group):
