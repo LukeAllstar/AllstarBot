@@ -168,7 +168,7 @@ async def joingroup(ctx, *groups):
         if(row != None):
             role = discord.utils.get(member.server.roles, name=row[1])
             await bot.add_roles(member, role)
-            await bot.reply("Du wurdest zu Gruppe " + row[1] + " hinzugefügt!")
+            await bot.reply("Du wurdest zur Gruppe " + row[1] + " hinzugefügt!")
         else:
             await bot.reply("Die Gruppe '" + group + "' ist nicht erlaubt.")
 
@@ -189,8 +189,8 @@ async def leavegroup(ctx, group):
     else:
         await bot.reply("Du bist nicht in dieser Gruppe")
         
-@bot.command(pass_context=True, aliases=["checkrole"])
-async def checkrole(ctx):
+@bot.command(pass_context=True, aliases=["roles", "rollen", "gruppen"])
+async def groups(ctx):
     member = ctx.message.author
     msg = "Du bist derzeit in folgenden Gruppen: \n"
     
@@ -199,7 +199,7 @@ async def checkrole(ctx):
     for group in botCur.execute("""SELECT name from allowedroles 
                                 WHERE server = '""" + member.server.name + """'
                                 """):
-        if (group.lower() in memberRoles):
+        if (group[0].lower() in memberRoles):
             msg += group[0]
             msg += ", "
     msg = msg[:-2] # remove last comma
