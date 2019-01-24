@@ -203,7 +203,7 @@ async def groups(ctx):
             msg += group[0]
             msg += ", "
     msg = msg[:-2] # remove last comma
-    await bot.say(msg)
+    await bot.say(msg)  
 
 @bot.command(pass_context=True, aliases=["allowedroles"])
 async def allowedgroups(ctx):
@@ -348,7 +348,7 @@ async def eventScheduler():
             #else:
                 #await asyncio.sleep(3600) # sleep for an hour
         
-        elif(now.weekday == 3): # gta thursday
+        elif(now.weekday() == 3): # gta thursday
             if(now.hour == 20): # at 20:00
                 await bot.change_presence(game=discord.Game(name="GTA Donnerstag"))
             if(now.hour == 23): # turn off at 23:00
