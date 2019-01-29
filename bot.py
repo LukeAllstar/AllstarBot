@@ -204,8 +204,8 @@ async def groups(ctx):
     msg = msg[:-2] # remove last comma
     await bot.say(msg)
 
-@bot.command(pass_context=True, aliases=["showmembers"])
-async def members(ctx, group):
+@bot.command(pass_context=True, aliases=["showmembers", "members"])
+async def groupmembers(ctx, group):
     member = ctx.message.author
     members = ctx.message.server.members
     memberList = []
@@ -221,17 +221,17 @@ async def members(ctx, group):
     else:
         # iterate through server members and check their roles
         for currentMember in members:
-            memberRoles = [y.name.lower() for y in member.roles]
-            if (group[0].lower() in memberRoles):
+            memberRoles = [y.name.lower() for y in currentMember.roles]
+            if (group.lower() in memberRoles):
                 memberList.append(currentMember)
                 continue
 
-    msg += row[1] + ":\n"
-    for currentMember in memberList:
-        msg += currentMember + ", "
+        msg += row[1] + ":\n"
+        for currentMember in memberList:
+            msg += currentMember.name + ", "
 
-    msg = msg[:-2]  # remove last comma
-    await bot.say(msg)
+        msg = msg[:-2]  # remove last comma
+        await bot.reply(msg)
 
 
 @bot.command(pass_context=True, aliases=["allowedroles"])
