@@ -202,7 +202,37 @@ async def groups(ctx):
             msg += group[0]
             msg += ", "
     msg = msg[:-2] # remove last comma
-    await bot.say(msg)  
+    await bot.say(msg)
+
+@bot.command(pass_context=True, aliases=["showmembers"])
+async def members(ctx, group):
+    member = ctx.message.author
+    members = ctx.message.server.members
+    memberList = []
+    msg = "Derzeit sind folgende Personen in der Gruppe "
+
+    botCur.execute("""SELECT server, name from allowedroles 
+                            WHERE server = '""" + member.server.name + """'
+                            AND LOWER(name) = LOWER('""" + group + """')
+                            """)
+    row = botCur.fetchone()
+    if(row == None):
+        await bot.reply("Diese Gruppe ist nicht erlaubt")
+    else:
+        # iterate through server members and check their roles
+        for currentMember in members:
+            memberRoles = [y.name.lower() for y in member.roles]
+            if (group[0].lower() in memberRoles):
+                memberList.append(currentMember)
+                continue
+
+    msg += row[1] + ":\n"
+    for currentMember in memberList:
+        msg += currentMember + ", "
+
+    msg = msg[:-2]  # remove last comma
+    await bot.say(msg)
+
 
 @bot.command(pass_context=True, aliases=["allowedroles"])
 async def allowedgroups(ctx):
