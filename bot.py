@@ -12,9 +12,11 @@ import strawpoll
 import asyncio
 import aiohttp
 import datetime
+import threading
 from gtaCommands import Gta
 from tabletopCommands import Tabletop
 from gifCommands import Gif
+from aiohttp import web
 
 with open('config.json') as json_data_file:
     data = json.load(json_data_file)
@@ -33,16 +35,19 @@ def token():
         token = data.get('token').strip('\"')
     return os.environ.get('TOKEN') or token
         
+# DISCORD BOT
 bot = commands.Bot(command_prefix=data["command_prefix"], description=data["description"])
 # maybe usefull later:
 #bot.remove_command("help")
 
+# GIFS
+gifs = Gif(bot)
+
+# SQLITE
 quotesConn = sqlite3.connect('db/quotes.db')
 botConn = sqlite3.connect('db/bot.db') # general bot db -> quotes should be moved there to
-
 quotesCur = quotesConn.cursor()
 botCur = botConn.cursor()
-gifs = Gif(bot)
 
 @bot.event
 async def on_ready():
@@ -69,12 +74,6 @@ async def on_ready():
 #    else:
 #        
 #    helptext += "```"
-    
-
-
-#@bot.command()
-#async def phil():
-#    await bot.say('Der schoenste Oesterreicher :flag_at:')
 
 @bot.command(aliases=["zitat"])
 async def quote(name : str = ""):
@@ -359,11 +358,55 @@ async def eventScheduler():
         await asyncio.sleep(3600) # always sleep for an hour
     print("something went wrong in gif of the month")
 
+##### WEBSERVER #####
+class Webapi():
 
+        def __init__(self, bot):
+           self.bot = bot
 
+        async def webserver(self):
+           async def handler(request):
+                await self.bot.change_presence(game=discord.Game(name="TEST"))
+                for channel in self.bot.get_all_channels():
+                    if(channel.server.name == "Lukes Playground" and "test" == channel.name):
+                        await self.bot.send_message(channel, "This is awesome")
+                return web.Response(text="it worked")
+
+           app = web.Application()
+           
+           # ROUTES
+           app.router.add_get('/sendmsg', handler)
+
+           runner = web.AppRunner(app)
+           await runner.setup()
+           # IP/PORT
+           self.site = web.TCPSite(runner, '0.0.0.0', 5004)
+           await self.bot.wait_until_ready()
+           await self.site.start()
+           print("startet webserver on 0.0.0.0:5004")
+
+        def __unload(self):
+           asyncio.ensure_future(self.site.stop())
+            
+webapi = Webapi(bot)
+##### WEBSERVER END #####
+
+##### SETUP #####
+# EVENTS (Gif of the Month, Gta Donnerstag)
 bot.loop.create_task(eventScheduler())
+
+# GTA
 bot.add_cog(Gta(bot))
-# Tabletop Commands werden aktuell nicht mehr unterstützt
+
+# TABLETOP - Commands werden aktuell nicht mehr unterstützt
 #bot.add_cog(Tabletop(bot))
+
+# GIFS
 bot.add_cog(gifs)
+
+# WEBSERVER
+bot.add_cog(webapi)
+bot.loop.create_task(webapi.webserver())
+
+# START the Bot
 bot.run(token())
