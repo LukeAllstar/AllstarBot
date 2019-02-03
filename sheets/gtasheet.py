@@ -54,6 +54,7 @@ class Gtasheet:
 
         try:
             if self.delete == True:
+                print("- deleting gta db")
                 dbfile = Path("db/gta.db")
                 if dbfile.exists():
                     try:
@@ -71,6 +72,7 @@ class Gtasheet:
             self.cur = self.conn.cursor()
                     
             if self.create == True:
+                print("creating gta db")
                 self.cur.execute('''CREATE TABLE playlist(
                                 name TEXT,
                                 date TEXT,
@@ -82,6 +84,10 @@ class Gtasheet:
                                 name TEXT,
                                 vehicleclass TEXT,
                                 isCanceled INT,
+                                racename TEXT,
+                                socialclub TEXT,
+                                mapper TEXT,
+                                desiredvehicle TEXT,
                                 FOREIGN KEY (playlistid) REFERENCES playlist(ROWID))''')
                 self.cur.execute('''CREATE TABLE player(
                                 name TEXT)''')
@@ -224,8 +230,6 @@ class Gtasheet:
         if not values:
             print('No data found.')
         else:
-            counter = 0
-            isCoop = False
             for row in values:
                 #print('%s' % row)
                 
@@ -244,7 +248,7 @@ class Gtasheet:
                         self.insertRace(playlistid, racenumber, isCanceled)
                         raceid = self.getCurrentRaceId()
                         rank = 0
-
+            
                     # new raced
                     rank = row[1]
                     player = row[2].lower()
@@ -260,8 +264,60 @@ class Gtasheet:
                     playlistid = None
                     raceid = None
                 
+        # 2019 sheet has a different structure
+        rangeName = 'Statistiken (Details) #2019!A2:N'
+        result2019 = service.spreadsheets().values().get(
+            spreadsheetId=spreadsheetId, range=rangeName, valueRenderOption='FORMULA').execute()
+        values2019 = result2019.get('values', [])
+
+
+        if not values2019:
+            print('No data found.')
+        else:
+            for row in values2019:
+                #print('%s' % row)
+                
+                if(len(row) >= 13 and row[12] != None):
+                    # new playlist
+                    #print('%s' % row)
+                    if(len(row) < 14):
+                        print("missing date for playlist " + str(row[12]))
+                        playlistdate = ''
+                    else:
+                        playlistdate = str(row[13])
+                    print('new 2019 playlist' + str(row[12]) + ' - ' + playlistdate)
+                    self.insertPlaylist(row[12], playlistdate)
+
+                if len(row) >= 12 and row[8] != None:
+                    # new race
+                    #print("new race")
+                    vehicle = row[11]
+                    isCanceled = False
+                    if row[1] == None or row[1] == "":
+                        isCanceled = True
+                    playlistid = int(self.getCurrentPlaylistId())
+                    racenumber = self.getNextRaceNumber(playlistid)
+                    self.insertRaceWithMetadata(playlistid, racenumber, isCanceled, row[8], row[9], row[10], row[11])
+                    raceid = self.getCurrentRaceId()
+                    rank = 0
+
+                if len(row) >= 7 and row[1] != None and row[2] != None and row[2] != "":
+                    # new raced
+                    #print("new raced")
+                    rank = row[1]
+                    player = row[2].lower()
+                    racetime = row[4]
+                    bestlap = row[5]
+                    money = row[6]
+                    
+                    self.checkPlayer(player)
+                    self.insertRaced(raceid, rank, bestlap, racetime, vehicle, player, money)
+                    rank += 1
+
+        # close
         self.conn.commit()
         self.end()
+
 
     def insertPlaylist(self, name, date):
         # Date conversion needed: https://developers.google.com/sheets/api/guides/concepts#datetime_serial_numbers
@@ -294,8 +350,14 @@ class Gtasheet:
         return rows[0]
     
     def insertRace(self, playlistid, racenumber, isCanceled):
-        self.cur.execute("""INSERT INTO race (playlistid, racenumber, isCanceled)
-                            VALUES(%s, %s, '%s')""" % (playlistid, racenumber, isCanceled))
+        self.insertRaceWithMetadata(playlistid, racenumber, isCanceled, "", "", "", "")
+        #self.cur.execute("""INSERT INTO race (playlistid, racenumber, isCanceled)
+        #                    VALUES(%s, %s, '%s')""" % (playlistid, racenumber, isCanceled))
+
+    def insertRaceWithMetadata(self, playlistid, racenumber, isCanceled, racename, socialclub, mapper, desiredvehicle):
+        print("inserting into race '%s', '%s', '%s', '%s', '%s', '%s', '%s'" % (playlistid, racenumber, isCanceled, racename, socialclub, mapper, desiredvehicle))
+        self.cur.execute("""INSERT INTO race (playlistid, racenumber, isCanceled, racename, socialclub, mapper, desiredvehicle)
+                            VALUES(?, ?, ?, ?, ?, ?, ?)""", (playlistid, racenumber, isCanceled, racename, socialclub, mapper, desiredvehicle))
     
     def insertRaced(self, raceid, rank, bestlap, racetime, vehicle, player, money):
         if bestlap == "-":

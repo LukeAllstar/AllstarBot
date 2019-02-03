@@ -9,8 +9,9 @@ def createGta(force : bool):
         print("db/gta.db already exists. Skipping")
     else:
         print("Creating db/gta.db ...")
-        gta = sheets.Gtasheet(True, True, True)
-        gta.update_database()
+        #gtaConn = sqlite3.connect('db/gta.db')
+        gta = sheets.Gtasheet(True, True, True, None)
+        gta.initgta()
         print("... Finished")
 
 def createTabletop(force : bool):

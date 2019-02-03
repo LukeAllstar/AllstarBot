@@ -42,6 +42,8 @@ class Gif:
             try:
                 await self.bot.delete_message(ctx.message)
                 gifMsg = await self.bot.say(outMessage)
+                # default "upvote"
+                await self.bot.add_reaction(gifMsg, '👍')
                 # after sending the message update the entry to save the message id and the channel id
                 self.gifsCur.execute("""UPDATE gifs SET messageId = '%s', channelId = '%s' WHERE ROWID = %s""" % (gifMsg.id, gifMsg.channel.id, lastid))
                 self.gifsConn.commit()
