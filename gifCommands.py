@@ -26,7 +26,10 @@ class Gif:
         if url == None:
             await self.bot.say('```!addGif "<url>" "<game>" "<comment>"```')
         else:
-            self.gifsCur.execute("""INSERT INTO gifs (url, game, comment, addedBy, addedOn) VALUES ('%s', '%s', '%s', '%s', current_timestamp)""" % (url, game, comment, ctx.message.author))
+            print(ctx.message.author)
+            print(ctx.message.author.name)
+            print(ctx.message.author.id)
+            self.gifsCur.execute("""INSERT INTO gifs (url, game, comment, addedBy, addedOn) VALUES (?, ?, ?, ?, current_timestamp)""", (url, game, comment, ctx.message.author.id))
             lastid = self.gifsCur.lastrowid
             if id != None:
                 self.gifsCur.execute("""Select ROWID from gifs where ROWID = %s""" % (id))
@@ -38,7 +41,7 @@ class Gif:
                     return
             self.gifsConn.commit()
             # get the inserted gif and format it
-            outMessage = self.formatGifWithId(lastid)
+            outMessage = await self.formatGifWithId(lastid)
             try:
                 await self.bot.delete_message(ctx.message)
                 gifMsg = await self.bot.say(outMessage)
@@ -53,13 +56,13 @@ class Gif:
                 await asyncio.sleep(6)
                 await self.bot.delete_message(message)
 
-    def formatGifWithId(self, gifid : int):
+    async def formatGifWithId(self, gifid : int):
         self.gifsCur.execute("""SELECT url, game, comment, addedBy, ROWID from gifs
                                 WHERE ROWID = %s""" % (gifid))
         row = self.gifsCur.fetchone()
-        return self.formatGif(row[0], row[1], row[2], row[3], row[4])
+        return await self.formatGif(row[0], row[1], row[2], row[3], row[4])
         
-    def formatGif(self, url, game, comment, addedBy, gifid):
+    async def formatGif(self, url, game, comment, addedBy, gifid):
         outStr = '```ml\n'
         if(comment != ""):
             outStr += '#%d: "%s"\n' % (gifid, comment)
@@ -69,9 +72,10 @@ class Gif:
         if(game != ""):
             outStr += "Spiel: " + game + "\n" 
         if(addedBy != ""):
+            user = await self.bot.get_user_info(addedBy)
             title = ['Dr. ', 'Meister ', 'Sir ', 'Mr. ', 'Lady ', 'Senor ', 'Der ', 'Das ', 'Die ', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']
             # addedBy contains discord userid like Pacman#1234
-            outStr += "Von " + random.choice(title) + addedBy.split("#")[0]
+            outStr += "Von " + random.choice(title) + user.name
         outStr += '```'
         outStr += url
         
@@ -120,7 +124,7 @@ class Gif:
         row = self.gifsCur.fetchone()
         
         if(row != None):
-            outStr = self.formatGif(row[0], row[1], row[2], row[3], row[4])
+            outStr = await self.formatGif(row[0], row[1], row[2], row[3], row[4])
             
             msg = await self.bot.say(outStr)
             if(row[5] != None and row[6] != None):
@@ -325,12 +329,12 @@ class Gif:
 
                     # Gif of the Month (most upvotes)
                     await self.bot.send_message(channel, "Das Gif des Monats mit "+ str(mostVotes) +" 👍 ist Gif #"+str(gifOfTheWeek[6]))
-                    gifMsg = self.formatGifWithId(gifOfTheWeek[6])
+                    gifMsg = await self.formatGifWithId(gifOfTheWeek[6])
                     gotmMsg = await self.bot.send_message(channel, gifMsg)
                     await self.addReactions(gotmMsg, gifOfTheWeek[4], gifOfTheWeek[5])
                     mostReactionsWinner=mostReactionsOTM[0]
                     # Most Reactions
                     await self.bot.send_message(channel, "Das Gif mit den meisten Reaktionen des Monats ist Gif #"+str(mostReactionsWinner[6]) + " mit " + str(mostReactions) + " Reaktionen!")
-                    gifMsg = self.formatGifWithId(mostReactionsWinner[6])
+                    gifMsg = await self.formatGifWithId(mostReactionsWinner[6])
                     mostReactionsMsg = await self.bot.send_message(channel, gifMsg)
                     await self.addReactions(mostReactionsMsg, mostReactionsWinner[4], mostReactionsWinner[5])

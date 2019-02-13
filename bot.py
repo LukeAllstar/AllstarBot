@@ -101,15 +101,7 @@ async def addquote(ctx, quote : str = None, name : str = None):
         quotesCur.execute("""INSERT INTO quotes (quote, name, addedBy) VALUES ('%s', '%s', '%s')""" % (quote, name, ctx.message.author))
         quotesConn.commit()
         await bot.say("Zitat hinzugefuegt")
-
-#@bot.command(pass_context=True)
-#async def test(ctx):
-#    """ Testing some permission stuff """
-#    await bot.say("author: " + str(ctx.message.author))
-#    #for role in ctx.message.author.roles:
-#    #    await bot.say("rolle: " + str(role.name))
-#    await bot.say("ist admin: " + str(ctx.message.author.server_permissions.administrator))
-         
+        
 @bot.command(pass_context=True)
 async def friends(ctx):
     """Freunde!"""
@@ -294,6 +286,16 @@ async def deleteRole(server, role):
 
 ### END ROLES ###
 
+@bot.command()
+async def getUserList():
+    user = await bot.get_user_info(117416669810393097)
+    print(user)
+    #for server in bot.servers:
+    #    #print(server)
+    #    print('-' + server.name)
+    #    for member in server.members:
+    #        print('---' + member.name + ', ' + member.id)
+
 #@bot.command()
 async def testMsgReaction():
     msg = await bot.say("this is a test")
@@ -395,25 +397,31 @@ class Webapi():
            self.bot = bot
 
         async def webserver(self):
-           async def handler(request):
+            async def handler(request):
                 await self.bot.change_presence(game=discord.Game(name="TEST"))
                 for channel in self.bot.get_all_channels():
                     if(channel.server.name == "Lukes Playground" and "test" == channel.name):
                         await self.bot.send_message(channel, "This is awesome")
                 return web.Response(text="it worked")
 
-           app = web.Application()
-           
-           # ROUTES
-           app.router.add_get('/sendmsg', handler)
+            async def getusername(request):
+                id = request.rel_url.query['id']
+                print(id)
+                user = await self.bot.get_user_info(id)
+                return web.Response(text=user.name)
 
-           runner = web.AppRunner(app)
-           await runner.setup()
-           # IP/PORT
-           self.site = web.TCPSite(runner, '0.0.0.0', 5004)
-           await self.bot.wait_until_ready()
-           await self.site.start()
-           print("startet webserver on 0.0.0.0:5004")
+            app = web.Application()
+
+            # ROUTES
+            app.router.add_get('/sendmsg', handler)
+            app.router.add_get('/getusername', getusername)
+            runner = web.AppRunner(app)
+            await runner.setup()
+            # IP/PORT
+            self.site = web.TCPSite(runner, '0.0.0.0', 5004)
+            await self.bot.wait_until_ready()
+            await self.site.start()
+            print("startet webserver on 0.0.0.0:5004")
 
         def __unload(self):
            asyncio.ensure_future(self.site.stop())
