@@ -176,44 +176,49 @@ class Gif:
         self.gifsCur.execute("""INSERT INTO comboGifs (id1, id2) VALUES (%d, %d)""" % (id1, id2))
         self.gifsConn.commit()
         await self.bot.say("Gifs #%s und #%s wurden zu einem ComboGif vereint :yin_yang: " % (id1, id2))
-        
+
+
     @commands.command(aliases=["listgifs", "listgif", "searchgifs"])
     async def searchgif(self, searchterm : str = ""):
-        """Zeigt ein Gif aus der Datenbank an"""
-        # Search for gifs and show a list
-        foundgif = False
-        initStr = '```ml\n'
-        initStr += "Folgende Gifs wurden gefunden:\n"
-        initStr += "| {:6}| {:<15s}| {:<45s}| {:<10s}\n".format("ID","Spieler","Name", "Spiel")
-        initStr += ('-' * 84)
-        initStr += "\n"
-        outStr = initStr
-        outStr = '```ml\n'
-        outStr += "Folgende Gifs wurden gefunden:\n"
-        outStr += "| {:6}| {:<15s}| {:<45s}| {:<10s}\n".format("ID","Spieler","Name", "Spiel")
-        outStr += ('-' * 84)
-        outStr += "\n"
-        counter = 0
-        for gif in self.gifsCur.execute("""Select game, comment, addedBy, ROWID from gifs
-                                    where """ #LOWER(addedBy) like '%""" + searchterm.lower() + """%' OR 
-                                        """LOWER(game) like '%""" + searchterm.lower() + """%' OR
-                                        LOWER(comment) like '%""" + searchterm.lower() + """%'"""):
-            outStr += "| {:6}| {:<15.16}| {:<45.44}| {:<10.10s}\n".format("#"+str(gif[3]), str(gif[2]).split("#")[0], str(gif[1]), str(gif[0]))
-            foundgif = True
-            counter += 1
-            if(counter % 20 == 0):
-                outStr += '```'
-                await self.bot.whisper(outStr)
-                outStr = initStr
-        outStr += '```'
-        if(foundgif):
-            if(counter <= 7):
-                await self.bot.say(outStr)
-            else:
-                await self.bot.reply("Resultate übermittelt :envelope_with_arrow: ")
-                await self.bot.whisper(outStr)
-        else:
-            await self.bot.say("Kein Gif zu '" + searchterm + "' gefunden :sob:")
+        await self.bot.say("Die Gif Suche findest du hier: http://allstar-bot.com/gifsearch/ :robot:")
+         
+    #@commands.command(aliases=["listgifs", "listgif", "searchgifs"])
+    #async def searchgif(self, searchterm : str = ""):
+    #    """Zeigt ein Gif aus der Datenbank an"""
+    #    # Search for gifs and show a list
+    #    foundgif = False
+    #    initStr = '```ml\n'
+    #    initStr += "Folgende Gifs wurden gefunden:\n"
+    #    initStr += "| {:6}| {:<15s}| {:<45s}| {:<10s}\n".format("ID","Spieler","Name", "Spiel")
+    #    initStr += ('-' * 84)
+    #    initStr += "\n"
+    #    outStr = initStr
+    #    outStr = '```ml\n'
+    #    outStr += "Folgende Gifs wurden gefunden:\n"
+    #    outStr += "| {:6}| {:<15s}| {:<45s}| {:<10s}\n".format("ID","Spieler","Name", "Spiel")
+    #    outStr += ('-' * 84)
+    #    outStr += "\n"
+    #    counter = 0
+    #    for gif in self.gifsCur.execute("""Select game, comment, addedBy, ROWID from gifs
+    #                                where """ #LOWER(addedBy) like '%""" + searchterm.lower() + """%' OR 
+    #                                    """LOWER(game) like '%""" + searchterm.lower() + """%' OR
+    #                                    LOWER(comment) like '%""" + searchterm.lower() + """%'"""):
+    #        outStr += "| {:6}| {:<15.16}| {:<45.44}| {:<10.10s}\n".format("#"+str(gif[3]), str(gif[2]).split("#")[0], str(gif[1]), str(gif[0]))
+    #        foundgif = True
+    #        counter += 1
+    #        if(counter % 20 == 0):
+    #            outStr += '```'
+    #            await self.bot.whisper(outStr)
+    #            outStr = initStr
+    #    outStr += '```'
+    #    if(foundgif):
+    #        if(counter <= 7):
+    #            await self.bot.say(outStr)
+    #        else:
+    #            await self.bot.reply("Resultate übermittelt :envelope_with_arrow: ")
+    #            await self.bot.whisper(outStr)
+    #    else:
+    #        await self.bot.say("Kein Gif zu '" + searchterm + "' gefunden :sob:")
         
     @commands.command(pass_context=True)
     async def deletegif(self, ctx, id):
