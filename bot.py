@@ -352,7 +352,43 @@ async def testGetResult():
         i = i + 1
     
     print("Die Rammerdestages sind: %s" % winners)
-                       
+
+@bot.event
+async def on_voice_state_update(before, after):
+    # pointe: 368113080741265408
+    # luke: 117416669810393097
+    searchid = '368113080741265408'
+    # pointezeit 
+    if after.id == searchid and after.voice.voice_channel is not None and "GTA" in after.voice.voice_channel.name:
+        now = datetime.datetime.today()
+        if(now.weekday() == 3 and now.hour >= 20 and now.hour <= 23):
+            showtime = True
+            with open("pointezeit.txt", "r") as pointefile:
+                lines = pointefile.read().splitlines()
+                for line in lines:
+                    #print("line: '"+ line + "'")
+                    #print("date: " + str(now.date()))
+                    #print(datetime.datetime.strptime(str(line),'%Y-%m-%d').date())
+                    try:
+                        if(datetime.datetime.strptime(str(line),"%Y-%m-%dT%H:%M:%S.%f").date() == now.date()):
+                            showtime = False
+                    except:
+                        print("parse error in pointezeit")
+            if showtime:
+                with open("pointezeit.txt", "w") as pointefile:
+                    pointefile.write(datetime.datetime.today().isoformat())
+                    pointefile.write("\n")
+                for channel in after.server.channels:
+                    if "gta5" in channel.name:
+                        user = discord.utils.get(bot.get_all_members(), id=searchid)
+                        msg = "Endlich ist "
+                        if user == None:
+                            msg += "Pointeblanc"
+                        else:
+                            msg += user.mention
+                        msg += " da! Jetzt gehts erst so richtig los! :boom: "
+                        await bot.send_message(channel, msg)
+
 async def eventScheduler():
     """This scheduler runs every hour"""
     await bot.wait_until_ready()
