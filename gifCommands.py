@@ -26,9 +26,9 @@ class Gif:
         if url == None:
             await self.bot.say('```!addGif "<url>" "<game>" "<comment>"```')
         else:
-            print(ctx.message.author)
-            print(ctx.message.author.name)
-            print(ctx.message.author.id)
+            #print(ctx.message.author)
+            #print(ctx.message.author.name)
+            #print(ctx.message.author.id)
             self.gifsCur.execute("""INSERT INTO gifs (url, game, comment, addedBy, addedOn) VALUES (?, ?, ?, ?, current_timestamp)""", (url, game, comment, ctx.message.author.id))
             lastid = self.gifsCur.lastrowid
             if id != None:
@@ -228,7 +228,7 @@ class Gif:
         row = self.gifsCur.fetchone()
         
         if(row != None):
-            if(str(ctx.message.author) == str(row[0])):
+            if(str(ctx.message.author.id) == str(row[0])):
                 # delete original message if possible
                 if(row[2] != None and row[3] != None):
                     print("deleting message")

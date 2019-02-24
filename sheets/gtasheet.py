@@ -258,7 +258,7 @@ class Gtasheet:
                     money = row[6]                   
                     
                     self.checkPlayer(player)
-                    self.insertRaced(raceid, rank, bestlap, racetime, vehicle, player, money)
+                    self.insertRaced(raceid, rank, bestlap, racetime, vehicle, player, money, "")
                     rank += 1
                 else:
                     playlistid = None
@@ -300,18 +300,23 @@ class Gtasheet:
                     self.insertRaceWithMetadata(playlistid, racenumber, isCanceled, row[8], row[9], row[10], row[11])
                     raceid = self.getCurrentRaceId()
                     rank = 0
+                    rankmod = 0
 
                 if len(row) >= 7 and row[1] != None and row[2] != None and row[2] != "":
                     # new raced
                     #print("new raced")
                     rank = row[1]
                     player = row[2].lower()
+                    wrongvehicle = row[3]
+                    if wrongvehicle == "x":
+                        rankmod += 1
+                        rank = 0
                     racetime = row[4]
                     bestlap = row[5]
                     money = row[6]
                     
                     self.checkPlayer(player)
-                    self.insertRaced(raceid, rank, bestlap, racetime, vehicle, player, money)
+                    self.insertRaced(raceid, rank - rankmod, bestlap, racetime, vehicle, player, money, wrongvehicle)
                     rank += 1
 
         # close
@@ -359,7 +364,7 @@ class Gtasheet:
         self.cur.execute("""INSERT INTO race (playlistid, racenumber, isCanceled, racename, socialclub, mapper, desiredvehicle)
                             VALUES(?, ?, ?, ?, ?, ?, ?)""", (playlistid, racenumber, isCanceled, racename, socialclub, mapper, desiredvehicle))
     
-    def insertRaced(self, raceid, rank, bestlap, racetime, vehicle, player, money):
+    def insertRaced(self, raceid, rank, bestlap, racetime, vehicle, player, money, wrongvehicle):
         if bestlap == "-":
             bestlap = 0
         isdnf = False    
@@ -368,9 +373,10 @@ class Gtasheet:
             isdnf = True
 
         isDisqualified = False
-        if vehicle == "DSQ":
+        if vehicle == "DSQ" or wrongvehicle == "x":
             isDisqualified = True
             vehicle = ""
+            rank = 0
             
         playerid = self.playernames[player]
         #print("Inserting player %s, raceid %s, bestlap %s, racetime %s, vehicle %s, rank %s, money %s, isdnf %s, isdsq %s"
