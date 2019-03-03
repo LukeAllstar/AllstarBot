@@ -279,7 +279,11 @@ class Gif:
                         """where date(addedOn) >  date(date('now', '-2 day'), '-1 month')"""):
             if(gif[4] != None and gif[5] != None):
                 gifChannel = discord.utils.get(self.bot.get_all_channels(), id=gif[5])
-                cache_msg = await self.bot.get_message(gifChannel, gif[4])
+                try:
+                    cache_msg = await self.bot.get_message(gifChannel, gif[4])
+                except:
+                    print("can't read gif id " + str(gif[5]) + ".")
+                    continue
                 reactionCount = 0
                 for reaction in cache_msg.reactions:
                     if(reaction.emoji == '👍'):
