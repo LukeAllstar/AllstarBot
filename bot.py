@@ -13,23 +13,39 @@ import asyncio
 import aiohttp
 import datetime
 import threading
+import logging
+from logging.handlers import TimedRotatingFileHandler
 from gtaCommands import Gta
 from tabletopCommands import Tabletop
 from gifCommands import Gif
 from aiohttp import web
 
+# LOGGING
+logger = logging.getLogger('bot')
+
+log_format = "[%(levelname)-5.5s] %(asctime)s - %(message)s"
+formatter = logging.Formatter(log_format)
+
+logging.basicConfig(level=logging.INFO, format=log_format, datefmt='%d-%m-%y %H:%M:%S')
+logname = "logs/allstar_bot.log"
+handler = TimedRotatingFileHandler(logname, when="midnight", interval=2)
+handler.suffix = "%Y%m%d"
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+
+# BOT CONFIG
 with open('config.json') as json_data_file:
     data = json.load(json_data_file)
 
 if not os.path.exists('db/tabletop.db') or not os.path.exists('db/gta.db') or not os.path.exists('db/quotes.db') or not os.path.exists('db/gifs.db'):
-    print("Databases do not exist. Running setup!")
+    logger.info("Databases do not exist. Running setup!")
     setup.setup()
 
 def token():
     '''Returns your token wherever it is'''
     if data.get('token') == "<token>":
         if not os.environ.get('TOKEN'):
-            print("Error retrieving token.")
+            logger.error("Error retrieving token.")
             exit()
     else:
         token = data.get('token').strip('\"')
@@ -51,10 +67,10 @@ botCur = botConn.cursor()
 
 @bot.event
 async def on_ready():
-    print('Logged in as')
-    print(bot.user.name)
-    print(bot.user.id)
-    print('------')
+    logger.info('Logged in as')
+    logger.info(bot.user.name)
+    logger.info(bot.user.id)
+    logger.info('------')
 
 #@bot.command
 #async def help(category : str = ""):
@@ -113,10 +129,10 @@ async def friends(ctx):
 """   
 @bot.command(pass_context=True)
 async def testupload(ctx, text):
-    print(text)
-    print(ctx.message)
-    print(ctx.message.attachments)
-    print(ctx.message.attachments[0]['url'])
+    logger.debug(text)
+    logger.debug(ctx.message)
+    logger.debug(ctx.message.attachments)
+    logger.debug(ctx.message.attachments[0]['url'])
     content = await get(ctx.message.attachments[0]['url'])
     write_to_file("media/audio/test.mp3", content)
     
@@ -289,69 +305,69 @@ async def deleteRole(server, role):
 @bot.command()
 async def getUserList():
     user = await bot.get_user_info(117416669810393097)
-    print(user)
+    logger.debug(user)
     #for server in bot.servers:
-    #    #print(server)
-    #    print('-' + server.name)
+    #    #logger.debug(server)
+    #    logger.debug('-' + server.name)
     #    for member in server.members:
-    #        print('---' + member.name + ', ' + member.id)
+    #        logger.debug('---' + member.name + ', ' + member.id)
 
 #@bot.command()
 async def testMsgReaction():
     msg = await bot.say("this is a test")
-    print("original msg: ")
-    print(msg)
+    logger.debug("original msg: ")
+    logger.debug(msg)
     await bot.add_reaction(msg, '\U0001F44D')
     #emojis = bot.get_all_emojis()
-    #print(emojis)
+    #logger.debug(emojis)
     await asyncio.sleep(10)
     cache_msg = discord.utils.get(bot.messages, id=msg.id)
-    print("new msg: ")
-    print(cache_msg)
-    print(cache_msg.reactions)
-    print(cache_msg.id)
+    logger.debug("new msg: ")
+    logger.debug(cache_msg)
+    logger.debug(cache_msg.reactions)
+    logger.debug(cache_msg.id)
     for reaction in cache_msg.reactions:
-        print(reaction.emoji)
-        print(reaction.count)
+        logger.debug(reaction.emoji)
+        logger.debug(reaction.count)
         
-    print("test")
+    logger.debug("test")
     emojis=bot.get_all_emojis()
-    print(emojis)
+    logger.debug(emojis)
     for emoji in emojis:
-        print(emoji)
+        logger.debug(emoji)
         
 #@bot.command(pass_context=True)
 async def msgStat(ctx):
     #cache_msg = discord.utils.get(bot.messages, id=510217606599409704)
     cache_msg = await bot.get_message(ctx.message.channel, 510222196459831296)
-    print(ctx.message.channel)
-    print(ctx.message.channel.id)
-    print("new msg: ")
-    print(cache_msg)
-    print(cache_msg.reactions)
-    print(cache_msg.id)
+    logger.debug(ctx.message.channel)
+    logger.debug(ctx.message.channel.id)
+    logger.debug("new msg: ")
+    logger.debug(cache_msg)
+    logger.debug(cache_msg.reactions)
+    logger.debug(cache_msg.id)
     for reaction in cache_msg.reactions:
-        print(reaction.emoji)
-        print(reaction.count)
+        logger.debug(reaction.emoji)
+        logger.debug(reaction.count)
         
 #@bot.command()
 async def testGetResult():
     api = strawpoll.API()
     resultPoll = await api.get_poll("https://www.strawpoll.me/16760672")
-    print(resultPoll.result_at(0))
-    print(resultPoll.options)
-    print(resultPoll.votes)
-    print(resultPoll.results())
+    logger.debug(resultPoll.result_at(0))
+    logger.debug(resultPoll.options)
+    logger.debug(resultPoll.votes)
+    logger.debug(resultPoll.results())
     orderedResults = resultPoll.results()
     i = 0
     votes = orderedResults[0][1]
     winners = []
     while(len(orderedResults) > i and votes == orderedResults[i][1]):
-        print(orderedResults[i][1])
+        logger.debug(orderedResults[i][1])
         winners.append(orderedResults[i][0])
         i = i + 1
     
-    print("Die Rammerdestages sind: %s" % winners)
+    logger.debug("Die Rammerdestages sind: %s" % winners)
 
 @bot.event
 async def on_voice_state_update(before, after):
@@ -366,14 +382,14 @@ async def on_voice_state_update(before, after):
             with open("pointezeit.txt", "r") as pointefile:
                 lines = pointefile.read().splitlines()
                 for line in lines:
-                    #print("line: '"+ line + "'")
-                    #print("date: " + str(now.date()))
-                    #print(datetime.datetime.strptime(str(line),'%Y-%m-%d').date())
+                    logger.debug("line: '"+ line + "'")
+                    logger.debug("date: " + str(now.date()))
+                    logger.debug(datetime.datetime.strptime(str(line),'%Y-%m-%d').date())
                     try:
                         if(datetime.datetime.strptime(str(line),"%Y-%m-%dT%H:%M:%S.%f").date() == now.date()):
                             showtime = False
                     except:
-                        print("parse error in pointezeit")
+                        logger.error("parse error in pointezeit")
             if showtime:
                 with open("pointezeit.txt", "w") as pointefile:
                     pointefile.write(datetime.datetime.today().isoformat())
@@ -406,11 +422,11 @@ async def eventScheduler():
                                 # skip because it has already been posted
                                 postGotm = False
                         except:
-                            print("ignore parse error")
+                            logger.warn("ignore parse error in gotm")
                 if(postGotm):
                     await gifs.gifOfTheMonth()
                 else:
-                    print("Already postet GOTM")
+                    logger.info("Already postet GOTM")
                 #await asyncio.sleep(3600) # sleep for an hour
             #else:
                 #await asyncio.sleep(3600) # sleep for an hour
@@ -421,10 +437,10 @@ async def eventScheduler():
             if(now.hour == 23): # turn off at 23:00
                 await bot.change_presence(game=discord.Game(name=""))
         else:
-            print("[" + str(now) + "] nothing scheduled")
+            logger.info("[" + str(now) + "] nothing scheduled")
             
         await asyncio.sleep(3600) # always sleep for an hour
-    print("something went wrong in gif of the month")
+    logger.error("something went wrong in gif of the month")
 
 ##### WEBSERVER #####
 class Webapi():
@@ -442,7 +458,7 @@ class Webapi():
 
             async def getusername(request):
                 id = request.rel_url.query['id']
-                print(id)
+                logger.debug(id)
                 user = await self.bot.get_user_info(id)
                 return web.Response(text=user.name)
 
@@ -457,7 +473,7 @@ class Webapi():
             self.site = web.TCPSite(runner, '0.0.0.0', 5004)
             await self.bot.wait_until_ready()
             await self.site.start()
-            print("startet webserver on 0.0.0.0:5004")
+            logger.info("startet webserver on 0.0.0.0:5004")
 
         def __unload(self):
            asyncio.ensure_future(self.site.stop())

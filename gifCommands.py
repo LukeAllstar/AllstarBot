@@ -12,6 +12,7 @@ import strawpoll
 import asyncio
 import aiohttp
 import datetime
+import logging
 
 class Gif:
 
@@ -19,6 +20,7 @@ class Gif:
         self.bot = bot
         self.gifsConn = sqlite3.connect('db/gifs.db')
         self.gifsCur = self.gifsConn.cursor()
+        self.logger = logging.getLogger('bot')
 
     @commands.command(pass_context=True, aliases=["addGif", "addgyf", "addGyf"])
     async def addgif(self, ctx, url, game : str = "", comment : str = "", id : int = None):
@@ -26,9 +28,9 @@ class Gif:
         if url == None:
             await self.bot.say('```!addGif "<url>" "<game>" "<comment>"```')
         else:
-            #print(ctx.message.author)
-            #print(ctx.message.author.name)
-            #print(ctx.message.author.id)
+            self.logger.debug(ctx.message.author)
+            self.logger.debug(ctx.message.author.name)
+            self.logger.debug(ctx.message.author.id)
             self.gifsCur.execute("""INSERT INTO gifs (url, game, comment, addedBy, addedOn) VALUES (?, ?, ?, ?, current_timestamp)""", (url, game, comment, ctx.message.author.id))
             lastid = self.gifsCur.lastrowid
             if id != None:
@@ -106,7 +108,6 @@ class Gif:
         Ist der Suchbegriff eine Zahl, wird das Gif mit der ID dieser Zahl ausgegeben.
         Wird kein Suchbegriff angegeben, wird ein zufälliges Gif angezeigt."""
         # Search for addedBy, game and comment
-        
         try:
             # id suche
             id = int(search)
@@ -231,11 +232,11 @@ class Gif:
             if(str(ctx.message.author.id) == str(row[0])):
                 # delete original message if possible
                 if(row[2] != None and row[3] != None):
-                    print("deleting message")
+                    self.logger.info("deleting message - " + str(row[0]) + ", " + str(row[2]) + ", " + str(row[3]))
                     channel = discord.utils.get(self.bot.get_all_channels(), id=row[3])
                     origMsg = await self.bot.get_message(channel, row[2])
                     await self.bot.delete_message(origMsg)
-                    print("deleted message")
+                    self.logger.debug("deleted message")
             
                 # TODO: combo gifs löschen
                 self.gifsCur.execute("""Delete from gifs
@@ -258,7 +259,7 @@ class Gif:
             try:
                 await self.bot.add_reaction(msg, reaction.emoji)
             except:
-                print("unknown reaction: " + str(reaction.emoji))
+                self.logger.error("unknown reaction: " + str(reaction.emoji))
 
 
     async def gifOfTheMonth(self):
@@ -282,7 +283,7 @@ class Gif:
                 try:
                     cache_msg = await self.bot.get_message(gifChannel, gif[4])
                 except:
-                    print("can't read gif id " + str(gif[5]) + ".")
+                    self.logger.error("can't read gif id " + str(gif[5]) + ".")
                     continue
                 reactionCount = 0
                 for reaction in cache_msg.reactions:
@@ -293,7 +294,7 @@ class Gif:
                         
                         if(reaction.count == mostVotes):
                             gifsOfTheWeek.append(gif)
-                    #print("message: " + str(cache_msg) + " - #reactions: " + str(len(cache_msg.reactions)) + " - reactions: ") 
+                    #self.logger.debug("message: " + str(cache_msg) + " - #reactions: " + str(len(cache_msg.reactions)) + " - reactions: ") 
                     reactionCount += reaction.count
                 if(reactionCount > mostReactions):
                     mostReactionsOTM = []

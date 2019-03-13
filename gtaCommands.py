@@ -5,6 +5,7 @@ import strawpoll
 import asyncio
 import datetime
 import sheets
+import logging
 
 class Gta:
 
@@ -12,6 +13,7 @@ class Gta:
         self.bot = bot
         self.gtaConn = sqlite3.connect('db/gta.db')
         self.gtaCur = self.gtaConn.cursor()
+        self.logger = logging.getLogger('bot')
 
     @commands.command()
     async def gtavehicles(self, vehicle : str = ""):
@@ -25,7 +27,7 @@ class Gta:
             s += "| {:20s}| {:10s}|\n".format("Fahrzeug", "Anzahl")
             s += ('-' * 35)
             s += "\n"
-
+        foundVehicle = False
         for row in self.gtaCur.execute("""Select vehicle, count(*) from (
                                         Select vehicle
                                         from raced
@@ -40,7 +42,10 @@ class Gta:
                 s += '| {:20s}| {:10s}|\n'.format(str(row[0]), str(row[1]))
             else:
                 s += 'Das Fahrzeug "%s" wurde %s mal verwendet.\n' % (row[0], row[1])
+            foundVehicle = True
         s += '```'
+        if not foundVehicle:
+            s = 'Das Fahrzeug \"' + vehicle + '\" wurde noch nie gefahren'
         await self.bot.say(s)
 
     @commands.command(pass_context=True)
@@ -76,7 +81,7 @@ class Gta:
                 pollfile.write(poll.url)
                 pollfile.write("\n")
                 if(hours > 0 and hours <= 24):
-                    #print("waiting for " + str(3600 * hours) + " seconds")
+                    self.logger.debug("waiting for " + str(3600 * hours) + " seconds")
                     await asyncio.sleep(3600*hours)
                     # retrieve poll and print the winner(s)
                     resultPoll = await api.get_poll(poll.url)
@@ -386,14 +391,14 @@ class Gta:
             gta.update_database()
             await self.bot.say("Update finished!")
         except Exception as e:
-            print(e)
+            self.logger.error(e)
             await self.bot.say("Error, check log :robot:")
 
         try:
             self.gtaConn = sqlite3.connect('db/gta.db')
             self.gtaCur = self.gtaConn.cursor()
         except Exception as e:
-            print(e)
+            self.logger.error(e)
 
     @commands.command()
     async def pointezeit(self, time = ""):
