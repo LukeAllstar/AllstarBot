@@ -26,7 +26,7 @@ logger = logging.getLogger('bot')
 log_format = "[%(levelname)-5.5s] %(asctime)s - %(message)s"
 formatter = logging.Formatter(log_format)
 
-logging.basicConfig(level=logging.INFO, format=log_format, datefmt='%d-%m-%y %H:%M:%S')
+logging.basicConfig(level=logging.DEBUG, format=log_format, datefmt='%d-%m-%y %H:%M:%S')
 logname = "logs/allstar_bot.log"
 handler = TimedRotatingFileHandler(logname, when="midnight", interval=2)
 handler.suffix = "%Y%m%d"
@@ -375,27 +375,34 @@ async def on_voice_state_update(before, after):
     # luke: 117416669810393097
     searchid = '368113080741265408'
     # pointezeit 
+    logger.debug("checking for pointetime")
     if after.id == searchid and after.voice.voice_channel is not None and "GTA" in after.voice.voice_channel.name:
+        logger.debug("correct user and channel")
         now = datetime.datetime.today()
-        if(now.weekday() == 3 and now.hour >= 20 and now.hour <= 23):
+        logger.debug(now)
+        if(now.weekday() == 3 and now.hour >= 19 and now.hour <= 20):
             showtime = True
             with open("pointezeit.txt", "r") as pointefile:
                 lines = pointefile.read().splitlines()
                 for line in lines:
                     logger.debug("line: '"+ line + "'")
                     logger.debug("date: " + str(now.date()))
-                    logger.debug(datetime.datetime.strptime(str(line),'%Y-%m-%d').date())
+                    logger.debug(datetime.datetime.strptime(str(line),"%Y-%m-%dT%H:%M:%S.%f").date())
                     try:
                         if(datetime.datetime.strptime(str(line),"%Y-%m-%dT%H:%M:%S.%f").date() == now.date()):
                             showtime = False
+                            logger.info("already posted pointetime")
+                        else:
+                            logger.info("showing pointetime")
                     except:
                         logger.error("parse error in pointezeit")
             if showtime:
-                with open("pointezeit.txt", "w") as pointefile:
+                with open("pointezeit.txt", "a+") as pointefile:
                     pointefile.write(datetime.datetime.today().isoformat())
                     pointefile.write("\n")
                 for channel in after.server.channels:
-                    if "gta5" in channel.name:
+                    if "asd" in channel.name:
+                        logger.debug("posting in channel " + str(channel.name))
                         user = discord.utils.get(bot.get_all_members(), id=searchid)
                         msg = "Endlich ist "
                         if user == None:
