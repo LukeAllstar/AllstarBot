@@ -401,7 +401,7 @@ async def on_voice_state_update(before, after):
                     pointefile.write(datetime.datetime.today().isoformat())
                     pointefile.write("\n")
                 for channel in after.server.channels:
-                    if "asd" in channel.name:
+                    if "GTA" in channel.name:
                         logger.debug("posting in channel " + str(channel.name))
                         user = discord.utils.get(bot.get_all_members(), id=searchid)
                         msg = "Endlich ist "

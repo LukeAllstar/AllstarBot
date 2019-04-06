@@ -93,9 +93,10 @@ class Gif:
             gifsCur2.execute("""Select url, comment, addedBy from gifs WHERE ROWID = %s """ % comboId)
             comboGif = gifsCur2.fetchone()
             if comboGif != None:
+                user = await self.bot.get_user_info(comboGif[2])
                 outStr += '\n```ml\n'
                 outStr += 'Das ist ein Combo Gif!\n'
-                outStr += 'Von: %s\n' % comboGif[2].split("#")[0]
+                outStr += 'Von: %s\n' % user
                 outStr += '#%d: "%s"' % (comboId, comboGif[1])
                 outStr += '```'
                 outStr += comboGif[0]
