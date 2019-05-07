@@ -96,7 +96,7 @@ class Gif:
                 user = await self.bot.get_user_info(comboGif[2])
                 outStr += '\n```ml\n'
                 outStr += 'Das ist ein Combo Gif!\n'
-                outStr += 'Von: %s\n' % user
+                outStr += 'Von: %s\n' % user.name
                 outStr += '#%d: "%s"' % (comboId, comboGif[1])
                 outStr += '```'
                 outStr += comboGif[0]
@@ -148,7 +148,8 @@ class Gif:
                             from gifs
                             group by addedBy
                             order by 2 desc"""):
-            s += "| {:<30.29}| {:<8}|\n".format(row[0].split("#")[0], row[1])
+            user = await self.bot.get_user_info(row[0])
+            s += "| {:<30.29}| {:<8}|\n".format(user.name, row[1])
         s += '```\n'
         s += '```ml\n'
         s += "| {:<30.29}| {:8s}|\n".format("Spiel","Anzahl")

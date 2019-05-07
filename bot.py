@@ -26,12 +26,30 @@ logger = logging.getLogger('bot')
 log_format = "[%(levelname)-5.5s] %(asctime)s - %(message)s"
 formatter = logging.Formatter(log_format)
 
-logging.basicConfig(level=logging.DEBUG, format=log_format, datefmt='%d-%m-%y %H:%M:%S')
+logging.basicConfig(level=logging.INFO, format=log_format, datefmt='%d-%m-%y %H:%M:%S')
 logname = "logs/allstar_bot.log"
 handler = TimedRotatingFileHandler(logname, when="midnight", interval=2)
 handler.suffix = "%Y%m%d"
 handler.setFormatter(formatter)
 logger.addHandler(handler)
+
+OPUS_LIBS = ['libopus-0.x86.dll', 'libopus-0.x64.dll', 'libopus-0.dll', 'libopus.so.0', 'libopus.0.dylib']
+
+
+def load_opus_lib(opus_libs=OPUS_LIBS):
+    if discord.opus.is_loaded():
+        return True
+
+    for opus_lib in opus_libs:
+        try:
+            discord.opus.load_opus(opus_lib)
+            return
+        except OSError:
+            pass
+
+        raise RuntimeError('Could not load an opus lib. Tried %s' % (', '.join(opus_libs)))
+
+load_opus_lib(OPUS_LIBS)
 
 # BOT CONFIG
 with open('config.json') as json_data_file:
@@ -54,7 +72,7 @@ def token():
 # DISCORD BOT
 bot = commands.Bot(command_prefix=data["command_prefix"], description=data["description"])
 # maybe usefull later:
-#bot.remove_command("help")
+
 
 # GIFS
 gifs = Gif(bot)
@@ -71,6 +89,13 @@ async def on_ready():
     logger.info(bot.user.name)
     logger.info(bot.user.id)
     logger.info('------')
+
+# remove the default help command
+bot.remove_command("help")
+
+@bot.command()
+async def help():
+    await bot.reply("Die Hilfe für die Befehle findest du hier: http://allstar-bot.com/commands/")
 
 #@bot.command
 #async def help(category : str = ""):
@@ -302,7 +327,7 @@ async def deleteRole(server, role):
 
 ### END ROLES ###
 
-@bot.command()
+#@bot.command()
 async def getUserList():
     user = await bot.get_user_info(117416669810393097)
     logger.debug(user)
@@ -369,6 +394,18 @@ async def testGetResult():
     
     logger.debug("Die Rammerdestages sind: %s" % winners)
 
+#@bot.command(pass_context=True)
+async def testVoice(ctx):
+	channel = ctx.message.author.voice.voice_channel
+	vc = await bot.join_voice_channel(channel)
+	player = vc.create_ffmpeg_player('/home/pi/rammer_des_tages.mp3', after=lambda: print('done'))
+	player.start()
+	while not player.is_done():
+		await asyncio.sleep(1)
+	# disconnect after the player has finished
+	player.stop()
+	await vc.disconnect()
+
 @bot.event
 async def on_voice_state_update(before, after):
     # pointe: 368113080741265408
@@ -380,7 +417,7 @@ async def on_voice_state_update(before, after):
         logger.debug("correct user and channel")
         now = datetime.datetime.today()
         logger.debug(now)
-        if(now.weekday() == 3 and now.hour >= 19 and now.hour <= 20):
+        if(now.weekday() == 3 and now.hour >= 19 and now.hour <= 23):
             showtime = True
             with open("pointezeit.txt", "r") as pointefile:
                 lines = pointefile.read().splitlines()
@@ -400,6 +437,20 @@ async def on_voice_state_update(before, after):
                 with open("pointezeit.txt", "a+") as pointefile:
                     pointefile.write(datetime.datetime.today().isoformat())
                     pointefile.write("\n")
+
+                for channel in self.bot.get_all_channels():
+                    if(channel.server.name == "Unterwasserpyromanen" and "GTA 5" in channel.name):
+                        try:
+                            vc = await self.bot.join_voice_channel(testChan)
+                            player = vc.create_ffmpeg_player('/home/pi/workspace/AllstarBot/media/rammer_des_tages.mp3', after=lambda: print('done'))
+                            player.start()
+                            while not player.is_done():
+                                await asyncio.sleep(1)
+                            # disconnect after the player has finished
+                            player.stop()
+                            await vc.disconnect()
+                        except:
+                            print("oh nein")
                 for channel in after.server.channels:
                     if "GTA" in channel.name:
                         logger.debug("posting in channel " + str(channel.name))
@@ -452,8 +503,9 @@ async def eventScheduler():
 ##### WEBSERVER #####
 class Webapi():
 
-        def __init__(self, bot):
+        def __init__(self, bot, gtaCog):
            self.bot = bot
+           self.gtaCog = gtaCog
 
         async def webserver(self):
             async def handler(request):
@@ -461,6 +513,10 @@ class Webapi():
                 for channel in self.bot.get_all_channels():
                     if(channel.server.name == "Lukes Playground" and "test" == channel.name):
                         await self.bot.send_message(channel, "This is awesome")
+                return web.Response(text="it worked")
+				
+            async def rammer(request):
+                await self.gtaCog.rammertest()
                 return web.Response(text="it worked")
 
             async def getusername(request):
@@ -473,6 +529,7 @@ class Webapi():
 
             # ROUTES
             app.router.add_get('/sendmsg', handler)
+            app.router.add_get('/rammerdestages', rammer)
             app.router.add_get('/getusername', getusername)
             runner = web.AppRunner(app)
             await runner.setup()
@@ -484,8 +541,9 @@ class Webapi():
 
         def __unload(self):
            asyncio.ensure_future(self.site.stop())
-            
-webapi = Webapi(bot)
+       
+gtaCog = Gta(bot)       
+webapi = Webapi(bot, gtaCog)
 ##### WEBSERVER END #####
 
 ##### SETUP #####
@@ -493,7 +551,7 @@ webapi = Webapi(bot)
 bot.loop.create_task(eventScheduler())
 
 # GTA
-bot.add_cog(Gta(bot))
+bot.add_cog(gtaCog)
 
 # TABLETOP - Commands werden aktuell nicht mehr unterstützt
 #bot.add_cog(Tabletop(bot))

@@ -48,6 +48,120 @@ class Gta:
             s = 'Das Fahrzeug \"' + vehicle + '\" wurde noch nie gefahren'
         await self.bot.say(s)
 
+    async def rammertest(self):
+        outChan = "gta5"
+        voiceChan = "GTA 5"
+        for channel in self.bot.get_all_channels():
+            if(channel.server.name == "Unterwasserpyromanen" and outChan == channel.name):
+                chan = channel
+        for channel in self.bot.get_all_channels():
+            if(channel.server.name == "Unterwasserpyromanen" and voiceChan in channel.name):
+                await self.bot.send_message(chan, "rammer test")
+                #####
+                """Startet einen Strawpoll Vote für den Rammer des Tages. Verwendet werden dafür alle User des angegebenen Voicechannels"""
+                now = datetime.datetime.now()
+                api = strawpoll.API()
+                options = []
+                nicknameMapping = {}
+                fairGefahrenStr = "Alle sind fair gefahren ☺"
+                extraOptions = ""
+                hours = 2
+                if "," in extraOptions:
+                    for o in extraOptions.split(","):
+                        options.append(o)
+                elif extraOptions != "":
+                    options.append(extraOptions)
+                
+                #for channel in ctx.message.server.channels:
+                #    if chan in channel.name: 
+                for member in channel.voice_members:
+                    name = str(member).split("#")[0]
+                    options.append(name)
+                    nicknameMapping[name] = member
+                print(options)
+                if len(options) >= 1:  
+                    options.append(fairGefahrenStr)
+                    poll = strawpoll.Poll("Rammer des Tages " + now.strftime("%Y-%m-%d"), options)
+                    poll.multi = True
+                    poll = await api.submit_poll(poll)
+                    await self.bot.send_file(chan, "media/RammerDesTages.png")
+                    #await self.bot.say("Jetzt Abstimmen für den Rammer des Tages!")
+                    await self.bot.send_message(chan,poll.url)
+                    
+                    ####
+                    try:
+                        for c in self.bot.get_all_channels():
+                            if(c.server.name == "Unterwasserpyromanen" and "GTA 5" in c.name):
+                                vc = await self.bot.join_voice_channel(c)
+                                player = vc.create_ffmpeg_player('/home/pi/rammer_des_tages.mp3', after=lambda: print('done'))
+                                player.start()
+                                while not player.is_done():
+                                    await asyncio.sleep(1)
+                                # disconnect after the player has finished
+                                player.stop()
+                                await vc.disconnect()
+                    except:
+                        print("oh nein")
+                    ####
+                    
+                    # log poll url into a file
+                    with open("polls.txt", "a") as pollfile:
+                        pollfile.write(poll.url)
+                        pollfile.write("\n")
+                        if(hours > 0 and hours <= 24):
+                            self.logger.debug("waiting for " + str(3600 * hours) + " seconds")
+                            await asyncio.sleep(3600*hours)
+                            # retrieve poll and print the winner(s)
+                            resultPoll = await api.get_poll(poll.url)
+                            orderedResults = resultPoll.results()
+                            i = 0
+                            votes = orderedResults[0][1]
+                            winners = []
+                            printWonder = False
+                            
+                            while(len(orderedResults) > i and votes == orderedResults[i][1]):
+                                winners.append(orderedResults[i][0])
+                                i = i + 1
+                            
+                            numberOfWinners = len(winners)
+                            if(fairGefahrenStr in winners):
+                                numberOfWinners -= 1
+                                printWonder = True
+                            
+                            if(numberOfWinners == 1):
+                                gratulateMsg = "Der Rammer des Tages ist "
+                            else:
+                                gratulateMsg = "Die Rammer des Tages sind "
+                            first = True
+                            
+                            for winner in winners:
+                                if(not first):
+                                    if(numberOfWinners == 2):
+                                        gratulateMsg += " und "
+                                    else:
+                                        gratulateMsg += ", "
+                            
+                                if(winner == fairGefahrenStr):
+                                    printWonder = True
+                                elif(winner in nicknameMapping):
+                                    gratulateMsg += nicknameMapping[winner].mention
+                                else:
+                                    # not a user, might be and extra option
+                                    gratulateMsg += winner
+                                first = False
+                            gratulateMsg += " mit " + str(votes) + " Stimmen"
+                            if(printWonder and numberOfWinners == 0):
+                                await self.bot.send_message(chan, "OH MEIN GOTT! Diesmal sind alle fair gefahren! :tada: ")
+                            elif(printWonder and numberOfWinners > 0):
+                                gratulateMsg += ". Es gab auch " + str(votes) + " Stimmen, dass alle fair gefahren sind :thumbsup:"
+                                await self.bot.send_message(chan,ratulateMsg)
+                            else:
+                                await self.bot.send_message(chan,gratulateMsg)
+                else:
+                    await self.bot.send_message(chan,"Konnte die Umfrage nicht anlegen. Zu wenige Leute im Channel " + chan.name)
+                #####
+                # todo: rammerdestages funktion umbauen, damit sie von hier aus aufgerufen werden kann
+
     @commands.command(pass_context=True)
     async def rammerdestages(self, ctx, chan:str = "GTA", extraOptions:str = "", hours : int = 2):
         """Startet einen Strawpoll Vote für den Rammer des Tages. Verwendet werden dafür alle User des angegebenen Voicechannels"""
@@ -76,6 +190,23 @@ class Gta:
             await self.bot.upload("media/RammerDesTages.png")
             #await self.bot.say("Jetzt Abstimmen für den Rammer des Tages!")
             await self.bot.say(poll.url)
+            
+            ####
+            try:
+                for c in self.bot.get_all_channels():
+                    if(c.server.name == "Unterwasserpyromanen" and "GTA 5" in c.name):
+                        vc = await self.bot.join_voice_channel(c)
+                        player = vc.create_ffmpeg_player('/home/pi/workspace/AllstarBot/media/rammer_des_tages.mp3', after=lambda: print('done'))
+                        player.start()
+                        while not player.is_done():
+                            await asyncio.sleep(1)
+                        # disconnect after the player has finished
+                        player.stop()
+                        await vc.disconnect()
+            except:
+                print("oh nein")
+            ####
+            
             # log poll url into a file
             with open("polls.txt", "a") as pollfile:
                 pollfile.write(poll.url)
@@ -410,3 +541,29 @@ class Gta:
             msg += userPointe.mention
         msg += " ist hier! Jetzt geht die Party ab!"
         await self.bot.say(msg) 
+        for channel in self.bot.get_all_channels():
+            if(channel.server.name == "Unterwasserpyromanen" and "GTA 5" in channel.name):
+                try:
+                    vc = await self.bot.join_voice_channel(testChan)
+                    player = vc.create_ffmpeg_player('/home/pi/workspace/AllstarBot/media/pointeblanc_1.mp3', after=lambda: print('done'))
+                    player.start()
+                    while not player.is_done():
+                        await asyncio.sleep(1)
+                    # disconnect after the player has finished
+                    player.stop()
+                    await vc.disconnect()
+                except:
+                    print("oh nein")
+
+    @commands.command()
+    async def gtaplayerlist(self):
+        outStr = "Folgende Spieler haben bereits am GTA Donnerstag teilgenommen: "
+        for row in self.gtaCur.execute("""Select distinct name from player"""):
+            outStr += row[0] + ", "
+        outStr = outStr[:-2] # remove last comma
+        await self.bot.say(outStr)
+        
+
+    @commands.command()
+    async def gta2018(self):
+        await self.bot.say("http://allstar-bot.com/gta2018/")
