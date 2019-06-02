@@ -19,6 +19,7 @@ from gtaCommands import Gta
 from tabletopCommands import Tabletop
 from gifCommands import Gif
 from aiohttp import web
+from collections import defaultdict
 
 # LOGGING
 logger = logging.getLogger('bot')
@@ -266,15 +267,41 @@ async def groupmembers(ctx, group):
         msg = msg[:-2]  # remove last comma
         await bot.reply(msg)
 
+async def getGroupMembers(servername):
+    groupmembers = defaultdict(list)
+    groups = await getGroupsOfServer(servername)
+    for server in bot.servers:
+        if(server.name == servername):
+            for group in groups:
+                for member in server.members:
+                    memberRoles = [y.name.lower() for y in member.roles]
+                    if (group.lower() in memberRoles):
+                        groupmembers[group].append(member.name)
+                        continue
+    return list(groupmembers.items())
+
+async def getGroupsOfServer(servername):
+    groups = []
+    for group in botCur.execute("""SELECT name from allowedroles 
+                            WHERE server = '""" + servername + """'
+                            """):
+        groups.append(group[0])
+    return groups
+
 
 @bot.command(pass_context=True, aliases=["allowedroles"])
 async def allowedgroups(ctx):
     member = ctx.message.author
     msg = "Folgende Gruppen sind erlaubt: \n"
-    for group in botCur.execute("""SELECT name from allowedroles 
-                            WHERE server = '""" + member.server.name + """'
-                            """):
-        msg += group[0]
+    #for group in botCur.execute("""SELECT name from allowedroles 
+    #                        WHERE server = '""" + member.server.name + """'
+    #                        """):
+    #    msg += group[0]
+    #    msg += ", "
+    #msg = msg[:-2] # remove last comma
+    groups = await getGroupsOfServer(member.server.name)
+    for group in groups:
+        msg += group
         msg += ", "
     msg = msg[:-2] # remove last comma
     await bot.say(msg)
@@ -431,6 +458,7 @@ async def on_voice_state_update(before, after):
                             logger.info("already posted pointetime")
                         else:
                             logger.info("showing pointetime")
+                            showtime = True
                     except:
                         logger.error("parse error in pointezeit")
             if showtime:
@@ -438,23 +466,24 @@ async def on_voice_state_update(before, after):
                     pointefile.write(datetime.datetime.today().isoformat())
                     pointefile.write("\n")
 
-                for channel in self.bot.get_all_channels():
-                    if(channel.server.name == "Unterwasserpyromanen" and "GTA 5" in channel.name):
-                        try:
-                            vc = await self.bot.join_voice_channel(testChan)
-                            player = vc.create_ffmpeg_player('/home/pi/workspace/AllstarBot/media/rammer_des_tages.mp3', after=lambda: print('done'))
+                try:
+                    for c in self.bot.get_all_channels():
+                        if(c.server.name == "Unterwasserpyromanen" and "GTA 5" in c.name):
+                            vc = await self.bot.join_voice_channel(c)
+                            player = vc.create_ffmpeg_player('/home/pi/workspace/AllstarBot/media/pointeblanc_1.mp3', after=lambda: print('done'))
                             player.start()
                             while not player.is_done():
                                 await asyncio.sleep(1)
                             # disconnect after the player has finished
                             player.stop()
                             await vc.disconnect()
-                        except:
-                            print("oh nein")
+                except:
+                    logger.error("fehler bei pointezeit")
+
                 for channel in after.server.channels:
-                    if "GTA" in channel.name:
+                    if "gta5" in channel.name:
                         logger.debug("posting in channel " + str(channel.name))
-                        user = discord.utils.get(bot.get_all_members(), id=searchid)
+                        user = discord.utils.get(bot.get_all_members(), id='368113080741265408')
                         msg = "Endlich ist "
                         if user == None:
                             msg += "Pointeblanc"
@@ -462,6 +491,24 @@ async def on_voice_state_update(before, after):
                             msg += user.mention
                         msg += " da! Jetzt gehts erst so richtig los! :boom: "
                         await bot.send_message(channel, msg)
+
+@bot.command()
+async def pointespass():
+    logger.info("pointespass")
+    for channel in bot.get_all_channels():
+        if(channel.server.name == "Unterwasserpyromanen" and "GTA 5" in channel.name):
+            logger.info("found channel")
+            try:
+                vc = await bot.join_voice_channel(channel)
+                player = vc.create_ffmpeg_player('/home/pi/workspace/AllstarBot/media/gehtslos.mp3', after=lambda: print('done'))
+                player.start()
+                while not player.is_done():
+                    await asyncio.sleep(1)
+                # disconnect after the player has finished
+                player.stop()
+                await vc.disconnect()
+            except:
+                print("oh nein")
 
 async def eventScheduler():
     """This scheduler runs every hour"""
@@ -509,7 +556,7 @@ class Webapi():
 
         async def webserver(self):
             async def handler(request):
-                await self.bot.change_presence(game=discord.Game(name="TEST"))
+                #await self.bot.change_presence(game=discord.Game(name="TEST"))
                 for channel in self.bot.get_all_channels():
                     if(channel.server.name == "Lukes Playground" and "test" == channel.name):
                         await self.bot.send_message(channel, "This is awesome")
@@ -525,12 +572,17 @@ class Webapi():
                 user = await self.bot.get_user_info(id)
                 return web.Response(text=user.name)
 
+            async def groupmembersapi(request):
+                groupmem = await getGroupMembers("Lukes Playground")
+                return web.json_response(groupmem)
+
             app = web.Application()
 
             # ROUTES
             app.router.add_get('/sendmsg', handler)
             app.router.add_get('/rammerdestages', rammer)
             app.router.add_get('/getusername', getusername)
+            app.router.add_get('/groupmembers', groupmembersapi)
             runner = web.AppRunner(app)
             await runner.setup()
             # IP/PORT

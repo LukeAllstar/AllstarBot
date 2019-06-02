@@ -56,7 +56,7 @@ class Gta:
                 chan = channel
         for channel in self.bot.get_all_channels():
             if(channel.server.name == "Unterwasserpyromanen" and voiceChan in channel.name):
-                await self.bot.send_message(chan, "rammer test")
+                #await self.bot.send_message(chan, "rammer test")
                 #####
                 """Startet einen Strawpoll Vote für den Rammer des Tages. Verwendet werden dafür alle User des angegebenen Voicechannels"""
                 now = datetime.datetime.now()
@@ -93,7 +93,7 @@ class Gta:
                         for c in self.bot.get_all_channels():
                             if(c.server.name == "Unterwasserpyromanen" and "GTA 5" in c.name):
                                 vc = await self.bot.join_voice_channel(c)
-                                player = vc.create_ffmpeg_player('/home/pi/rammer_des_tages.mp3', after=lambda: print('done'))
+                                player = vc.create_ffmpeg_player('/home/pi/workspace/AllstarBot/media/rammerbob.mp3', after=lambda: print('done'))
                                 player.start()
                                 while not player.is_done():
                                     await asyncio.sleep(1)
@@ -101,7 +101,7 @@ class Gta:
                                 player.stop()
                                 await vc.disconnect()
                     except:
-                        print("oh nein")
+                        self.logger.error("error in rammertest")
                     ####
                     
                     # log poll url into a file
@@ -109,7 +109,7 @@ class Gta:
                         pollfile.write(poll.url)
                         pollfile.write("\n")
                         if(hours > 0 and hours <= 24):
-                            self.logger.debug("waiting for " + str(3600 * hours) + " seconds")
+                            self.logger.info("waiting for " + str(3600 * hours) + " seconds for vote end")
                             await asyncio.sleep(3600*hours)
                             # retrieve poll and print the winner(s)
                             resultPoll = await api.get_poll(poll.url)
@@ -154,7 +154,7 @@ class Gta:
                                 await self.bot.send_message(chan, "OH MEIN GOTT! Diesmal sind alle fair gefahren! :tada: ")
                             elif(printWonder and numberOfWinners > 0):
                                 gratulateMsg += ". Es gab auch " + str(votes) + " Stimmen, dass alle fair gefahren sind :thumbsup:"
-                                await self.bot.send_message(chan,ratulateMsg)
+                                await self.bot.send_message(chan,gratulateMsg)
                             else:
                                 await self.bot.send_message(chan,gratulateMsg)
                 else:
@@ -196,7 +196,7 @@ class Gta:
                 for c in self.bot.get_all_channels():
                     if(c.server.name == "Unterwasserpyromanen" and "GTA 5" in c.name):
                         vc = await self.bot.join_voice_channel(c)
-                        player = vc.create_ffmpeg_player('/home/pi/workspace/AllstarBot/media/rammer_des_tages.mp3', after=lambda: print('done'))
+                        player = vc.create_ffmpeg_player('/home/pi/workspace/AllstarBot/media/rammerbob.mp3', after=lambda: print('done'))
                         player.start()
                         while not player.is_done():
                             await asyncio.sleep(1)
