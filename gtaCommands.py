@@ -93,10 +93,18 @@ class Gta:
                         for c in self.bot.get_all_channels():
                             if(c.server.name == "Unterwasserpyromanen" and "GTA 5" in c.name):
                                 vc = await self.bot.join_voice_channel(c)
-                                player = vc.create_ffmpeg_player('/home/pi/workspace/AllstarBot/media/rammerbob.mp3', after=lambda: print('done'))
+                                await asyncio.sleep(5)
+                                rammersoundspath = '/home/pi/workspace/AllstarBot/media/rammerdestages'
+                                rammersounds = []
+                                # r=root, d=directories, f = files
+                                for r, d, f in os.walk(rammersoundspath):
+                                    for file in f:
+                                        rammersounds.append(file)
+                                rammersoundfile = random.choice(rammersounds)
+                                player = vc.create_ffmpeg_player(rammersoundspath+'/'+rammersoundfile, after=lambda: print('done'))
                                 player.start()
                                 while not player.is_done():
-                                    await asyncio.sleep(1)
+                                    await asyncio.sleep(5)
                                 # disconnect after the player has finished
                                 player.stop()
                                 await vc.disconnect()
@@ -196,10 +204,18 @@ class Gta:
                 for c in self.bot.get_all_channels():
                     if(c.server.name == "Unterwasserpyromanen" and "GTA 5" in c.name):
                         vc = await self.bot.join_voice_channel(c)
-                        player = vc.create_ffmpeg_player('/home/pi/workspace/AllstarBot/media/rammerbob.mp3', after=lambda: print('done'))
+                        await asyncio.sleep(5)
+                        rammersoundspath = '/home/pi/workspace/AllstarBot/media/rammerdestages'
+                        rammersounds = []
+                        # r=root, d=directories, f = files
+                        for r, d, f in os.walk(rammersoundspath):
+                            for file in f:
+                                rammersounds.append(file)
+                        rammersoundfile = random.choice(rammersounds)
+                        player = vc.create_ffmpeg_player(rammersoundspath+'/'+rammersoundfile, after=lambda: print('done'))
                         player.start()
                         while not player.is_done():
-                            await asyncio.sleep(1)
+                            await asyncio.sleep(5)
                         # disconnect after the player has finished
                         player.stop()
                         await vc.disconnect()

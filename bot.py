@@ -129,7 +129,7 @@ async def quote(name : str = ""):
                                     ORDER BY RANDOM() LIMIT 1)""")
     row = quotesCur.fetchone()
     if(row != None):
-        await bot.say('```\"%s\" - %s```' % (row[0], row[1]))
+        await bot.say('>>> %s\n- %s' % (row[0], row[1]))
     else:
         await bot.say("Kein Zitat von '%s' gefunden.\nHier nimm ein :ice_cream: stattdessen." % name)
 
@@ -142,7 +142,16 @@ async def addquote(ctx, quote : str = None, name : str = None):
     else:
         quotesCur.execute("""INSERT INTO quotes (quote, name, addedBy) VALUES ('%s', '%s', '%s')""" % (quote, name, ctx.message.author))
         quotesConn.commit()
-        await bot.say("Zitat hinzugefuegt")
+        try:
+            outMessage = '>>> ' # Discord Multiline Quote
+            outMessage += quote
+            outMessage += '\n'
+            outMessage += '- ' + name
+            await bot.delete_message(ctx.message)
+            await bot.say("Neues Zitat von " + ctx.message.author.name + " hinzugefügt.")
+            await bot.say(outMessage)
+        except discord.Forbidden as e:
+            await bot.say("Zitat hinzugefuegt")
         
 @bot.command(pass_context=True)
 async def friends(ctx):
@@ -239,33 +248,37 @@ async def groups(ctx):
     await bot.say(msg)
 
 @bot.command(pass_context=True, aliases=["showmembers", "members"])
-async def groupmembers(ctx, group):
-    member = ctx.message.author
-    members = ctx.message.server.members
-    memberList = []
-    msg = "Derzeit sind folgende Personen in der Gruppe "
-
-    botCur.execute("""SELECT server, name from allowedroles 
-                            WHERE server = '""" + member.server.name + """'
-                            AND LOWER(name) = LOWER('""" + group + """')
-                            """)
-    row = botCur.fetchone()
-    if(row == None):
-        await bot.reply("Diese Gruppe ist nicht erlaubt")
+async def groupmembers(ctx, group = ""):
+    if group == "":
+        await bot.reply("Die Gruppen und die dazugehörigen Mitglieder findest du hier: http://allstar-bot.com/groupmembers/")
     else:
-        # iterate through server members and check their roles
-        for currentMember in members:
-            memberRoles = [y.name.lower() for y in currentMember.roles]
-            if (group.lower() in memberRoles):
-                memberList.append(currentMember)
-                continue
+        # Mitglieder einer bestimmten Gruppe ausgeben
+        member = ctx.message.author
+        members = ctx.message.server.members
+        memberList = []
+        msg = "Derzeit sind folgende Personen in der Gruppe "
 
-        msg += row[1] + ":\n"
-        for currentMember in memberList:
-            msg += currentMember.name + ", "
+        botCur.execute("""SELECT server, name from allowedroles 
+                                WHERE server = '""" + member.server.name + """'
+                                AND LOWER(name) = LOWER('""" + group + """')
+                                """)
+        row = botCur.fetchone()
+        if(row == None):
+            await bot.reply("Diese Gruppe ist nicht erlaubt")
+        else:
+            # iterate through server members and check their roles
+            for currentMember in members:
+                memberRoles = [y.name.lower() for y in currentMember.roles]
+                if (group.lower() in memberRoles):
+                    memberList.append(currentMember)
+                    continue
 
-        msg = msg[:-2]  # remove last comma
-        await bot.reply(msg)
+            msg += row[1] + ":\n"
+            for currentMember in memberList:
+                msg += currentMember.name + ", "
+
+            msg = msg[:-2]  # remove last comma
+            await bot.reply(msg)
 
 async def getGroupMembers(servername):
     groupmembers = defaultdict(list)
@@ -278,7 +291,7 @@ async def getGroupMembers(servername):
                     if (group.lower() in memberRoles):
                         groupmembers[group].append(member.name)
                         continue
-    return list(groupmembers.items())
+    return dict(groupmembers.items())
 
 async def getGroupsOfServer(servername):
     groups = []
@@ -457,19 +470,19 @@ async def on_voice_state_update(before, after):
                             showtime = False
                             logger.info("already posted pointetime")
                         else:
-                            logger.info("showing pointetime")
                             showtime = True
                     except:
                         logger.error("parse error in pointezeit")
             if showtime:
+                logger.info("showing pointetime")
                 with open("pointezeit.txt", "a+") as pointefile:
                     pointefile.write(datetime.datetime.today().isoformat())
                     pointefile.write("\n")
 
                 try:
-                    for c in self.bot.get_all_channels():
+                    for c in bot.get_all_channels():
                         if(c.server.name == "Unterwasserpyromanen" and "GTA 5" in c.name):
-                            vc = await self.bot.join_voice_channel(c)
+                            vc = await bot.join_voice_channel(c)
                             player = vc.create_ffmpeg_player('/home/pi/workspace/AllstarBot/media/pointeblanc_1.mp3', after=lambda: print('done'))
                             player.start()
                             while not player.is_done():
@@ -573,7 +586,7 @@ class Webapi():
                 return web.Response(text=user.name)
 
             async def groupmembersapi(request):
-                groupmem = await getGroupMembers("Lukes Playground")
+                groupmem = await getGroupMembers("Unterwasserpyromanen")
                 return web.json_response(groupmem)
 
             app = web.Application()

@@ -404,5 +404,6 @@ class Gtasheet:
  
 # just here for testing 
 if __name__ == '__main__':
-    gta = Gtasheet(True, True, False) 
+    gtaConn = sqlite3.connect('db/gta.db')
+    gta = Gtasheet(False, True, False, gtaConn) 
     gta.update_database()
