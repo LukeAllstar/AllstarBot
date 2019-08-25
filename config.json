@@ -1,5 +1,5 @@
 {
-	"token": "<token>",
+	"token": "MzY2MjA0ODE1NzkwOTY0NzM2.DLpecw.o4Ze5prjUL6Ijh7kki2gLKTuRJM",
 	"log_level": 2,
 	"command_prefix": "!",
 	"ignore_modules": [".gitignore", "__pycache__","module.py"],

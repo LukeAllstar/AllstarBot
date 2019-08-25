@@ -6,8 +6,10 @@ import asyncio
 import datetime
 import sheets
 import logging
+import os
+import random
 
-class Gta:
+class Gta(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
@@ -16,7 +18,7 @@ class Gta:
         self.logger = logging.getLogger('bot')
 
     @commands.command()
-    async def gtavehicles(self, vehicle : str = ""):
+    async def gtavehicles(self, ctx, vehicle : str = ""):
         """Meistverwendesten Fahrzeuge"""
         #Returns top 7 used vehicles
         s = "```ml\n"
@@ -46,17 +48,17 @@ class Gta:
         s += '```'
         if not foundVehicle:
             s = 'Das Fahrzeug \"' + vehicle + '\" wurde noch nie gefahren'
-        await self.bot.say(s)
+        await ctx.send(s)
 
     async def rammertest(self):
         outChan = "gta5"
         voiceChan = "GTA 5"
         for channel in self.bot.get_all_channels():
-            if(channel.server.name == "Unterwasserpyromanen" and outChan == channel.name):
+            if(channel.guild.name == "Unterwasserpyromanen" and outChan == channel.name):
                 chan = channel
         for channel in self.bot.get_all_channels():
-            if(channel.server.name == "Unterwasserpyromanen" and voiceChan in channel.name):
-                #await self.bot.send_message(chan, "rammer test")
+            if(channel.guild.name == "Unterwasserpyromanen" and voiceChan in channel.name):
+                #await chan.send("rammer test")
                 #####
                 """Startet einen Strawpoll Vote für den Rammer des Tages. Verwendet werden dafür alle User des angegebenen Voicechannels"""
                 now = datetime.datetime.now()
@@ -72,9 +74,9 @@ class Gta:
                 elif extraOptions != "":
                     options.append(extraOptions)
                 
-                #for channel in ctx.message.server.channels:
+                #for channel in ctx.guild.channels:
                 #    if chan in channel.name: 
-                for member in channel.voice_members:
+                for member in channel.members:
                     name = str(member).split("#")[0]
                     options.append(name)
                     nicknameMapping[name] = member
@@ -84,15 +86,15 @@ class Gta:
                     poll = strawpoll.Poll("Rammer des Tages " + now.strftime("%Y-%m-%d"), options)
                     poll.multi = True
                     poll = await api.submit_poll(poll)
-                    await self.bot.send_file(chan, "media/RammerDesTages.png")
-                    #await self.bot.say("Jetzt Abstimmen für den Rammer des Tages!")
-                    await self.bot.send_message(chan,poll.url)
+                    await chan.send(file=discord.File("media/RammerDesTages.png"))
+                    #await ctx.send("Jetzt Abstimmen für den Rammer des Tages!")
+                    await chan.send(poll.url)
                     
                     ####
                     try:
                         for c in self.bot.get_all_channels():
-                            if(c.server.name == "Unterwasserpyromanen" and "GTA 5" in c.name):
-                                vc = await self.bot.join_voice_channel(c)
+                            if(c.guild.name == "Unterwasserpyromanen" and "GTA 5" in c.name):
+                                vc = await c.connect()
                                 await asyncio.sleep(5)
                                 rammersoundspath = '/home/pi/workspace/AllstarBot/media/rammerdestages'
                                 rammersounds = []
@@ -101,15 +103,15 @@ class Gta:
                                     for file in f:
                                         rammersounds.append(file)
                                 rammersoundfile = random.choice(rammersounds)
-                                player = vc.create_ffmpeg_player(rammersoundspath+'/'+rammersoundfile, after=lambda: print('done'))
-                                player.start()
-                                while not player.is_done():
+                                vc.play(discord.FFmpegPCMAudio(rammersoundspath+'/'+rammersoundfile), after=lambda e: print('done', e))
+                                while vc.is_playing():
                                     await asyncio.sleep(5)
                                 # disconnect after the player has finished
-                                player.stop()
+                                vc.stop()
                                 await vc.disconnect()
-                    except:
-                        self.logger.error("error in rammertest")
+                    except Exception as e:
+                        self.logger.error("fehler beim Rammer des Tages")
+                        self.logger.error(str(e))
                     ####
                     
                     # log poll url into a file
@@ -159,18 +161,18 @@ class Gta:
                                 first = False
                             gratulateMsg += " mit " + str(votes) + " Stimmen"
                             if(printWonder and numberOfWinners == 0):
-                                await self.bot.send_message(chan, "OH MEIN GOTT! Diesmal sind alle fair gefahren! :tada: ")
+                                await chan.send("OH MEIN GOTT! Diesmal sind alle fair gefahren! :tada: ")
                             elif(printWonder and numberOfWinners > 0):
                                 gratulateMsg += ". Es gab auch " + str(votes) + " Stimmen, dass alle fair gefahren sind :thumbsup:"
-                                await self.bot.send_message(chan,gratulateMsg)
+                                await chan.send(gratulateMsg)
                             else:
-                                await self.bot.send_message(chan,gratulateMsg)
+                                await chan.send(gratulateMsg)
                 else:
-                    await self.bot.send_message(chan,"Konnte die Umfrage nicht anlegen. Zu wenige Leute im Channel " + chan.name)
+                    await chan.send("Konnte die Umfrage nicht anlegen. Zu wenige Leute im Channel " + chan.name)
                 #####
                 # todo: rammerdestages funktion umbauen, damit sie von hier aus aufgerufen werden kann
 
-    @commands.command(pass_context=True)
+    @commands.command()
     async def rammerdestages(self, ctx, chan:str = "GTA", extraOptions:str = "", hours : int = 2):
         """Startet einen Strawpoll Vote für den Rammer des Tages. Verwendet werden dafür alle User des angegebenen Voicechannels"""
         now = datetime.datetime.now()
@@ -184,9 +186,9 @@ class Gta:
         elif extraOptions != "":
             options.append(extraOptions)
         
-        for channel in ctx.message.server.channels:
+        for channel in ctx.guild.channels:
             if chan in channel.name: 
-                for member in channel.voice_members:
+                for member in channel.members:
                     name = str(member).split("#")[0]
                     options.append(name)
                     nicknameMapping[name] = member
@@ -195,15 +197,15 @@ class Gta:
             poll = strawpoll.Poll("Rammer des Tages " + now.strftime("%Y-%m-%d"), options)
             poll.multi = True
             poll = await api.submit_poll(poll)
-            await self.bot.upload("media/RammerDesTages.png")
-            #await self.bot.say("Jetzt Abstimmen für den Rammer des Tages!")
-            await self.bot.say(poll.url)
+            await ctx.send(file=discord.File("media/RammerDesTages.png"))
+            #await ctx.send("Jetzt Abstimmen für den Rammer des Tages!")
+            await ctx.send(poll.url)
             
             ####
             try:
                 for c in self.bot.get_all_channels():
-                    if(c.server.name == "Unterwasserpyromanen" and "GTA 5" in c.name):
-                        vc = await self.bot.join_voice_channel(c)
+                    if(c.guild.name == "Unterwasserpyromanen" and "GTA 5" in c.name):
+                        vc = await c.connect()
                         await asyncio.sleep(5)
                         rammersoundspath = '/home/pi/workspace/AllstarBot/media/rammerdestages'
                         rammersounds = []
@@ -212,15 +214,15 @@ class Gta:
                             for file in f:
                                 rammersounds.append(file)
                         rammersoundfile = random.choice(rammersounds)
-                        player = vc.create_ffmpeg_player(rammersoundspath+'/'+rammersoundfile, after=lambda: print('done'))
-                        player.start()
-                        while not player.is_done():
+                        vc.play(discord.FFmpegPCMAudio(rammersoundspath+'/'+rammersoundfile), after=lambda e: print('done', e))
+                        while vc.is_playing():
                             await asyncio.sleep(5)
                         # disconnect after the player has finished
-                        player.stop()
+                        vc.stop()
                         await vc.disconnect()
-            except:
-                print("oh nein")
+            except Exception as e:
+                self.logger.error("fehler beim Rammer des Tages")
+                self.logger.error(str(e))
             ####
             
             # log poll url into a file
@@ -270,21 +272,21 @@ class Gta:
                         first = False
                     gratulateMsg += " mit " + str(votes) + " Stimmen"
                     if(printWonder and numberOfWinners == 0):
-                        await self.bot.say("OH MEIN GOTT! Diesmal sind alle fair gefahren! :tada: ")
+                        await ctx.send("OH MEIN GOTT! Diesmal sind alle fair gefahren! :tada: ")
                     elif(printWonder and numberOfWinners > 0):
                         gratulateMsg += ". Es gab auch " + str(votes) + " Stimmen, dass alle fair gefahren sind :thumbsup:"
-                        await self.bot.say(gratulateMsg)
+                        await ctx.send(gratulateMsg)
                     else:
-                        await self.bot.say(gratulateMsg)
+                        await ctx.send(gratulateMsg)
         else:
-            await self.bot.say("Konnte die Umfrage nicht anlegen. Zu wenige Leute im Channel " + chan)
+            await ctx.send("Konnte die Umfrage nicht anlegen. Zu wenige Leute im Channel " + chan)
 
     @commands.command()
-    async def gtaracewins(self,player : str = None):
+    async def gtaracewins(self, ctx, player : str = None):
         """Anzahl der Rennsiege eines Spielers"""
         #Returns the number of race wins of a player
         if player == None:
-            await self.bot.say('```!gtaracewins <player>```')
+            await ctx.send('```!gtaracewins <player>```')
         else:
             self.gtaCur.execute("""Select COALESCE(count(*),0), player.name
                             from raced
@@ -292,10 +294,10 @@ class Gta:
                             where rank = 1 AND
                                 LOWER(player.name) like '%""" + player + """%'""")
             row = self.gtaCur.fetchone()
-            await self.bot.say('```cs\nSpieler "%s" hat %s Rennen gewonnen.```' % (row[1], row[0]))
+            await ctx.send('```cs\nSpieler "%s" hat %s Rennen gewonnen.```' % (row[1], row[0]))
 
     @commands.command()
-    async def gtaplaylistwins(self):
+    async def gtaplaylistwins(self, ctx):
         """Listet welcher Spieler wieviele Playlisten gewonnen hat"""
         s = "```ml\n"
         s += "| {:20s}| {:8s}|\n".format("Spieler", "Siege")
@@ -309,14 +311,14 @@ class Gta:
                         order by wins desc"""):
             s += '| {:20s}| {:8s}|\n'.format(str(row[0]), str(row[1]))
         s += '```'
-        await self.bot.say(s)
+        await ctx.send(s)
 
     @commands.command()
-    async def gtaplaylist(self, playlist : str = ""):
+    async def gtaplaylist(self, ctx, playlist : str = ""):
         """Ergebnisse einer bestimmten Playliste"""
         
         if playlist == "":
-            await self.bot.say("```!gtaplaylist <playlist>```")
+            await ctx.send("```!gtaplaylist <playlist>```")
         else:
             s = "```ml\n"
             s += "Ergebnis Playlist %s\n\n" % playlist
@@ -352,10 +354,10 @@ class Gta:
                 prevPoints = row[1]
                 rank += 1
             s += "```"
-            await self.bot.say(s)
+            await ctx.send(s)
 
     @commands.command()
-    async def gtaplayerstatsfull(self, player : str):
+    async def gtaplayerstatsfull(self, ctx, player : str):
         """Alle Platzierungen in allen Playlisten eines Spielers.
         Der angegebene Name muss der Nickname aus GTA sein"""
         i = 0
@@ -396,19 +398,19 @@ class Gta:
             emptyResult = False
             if(i >= 15):
                 s += "```"
-                await self.bot.whisper(s)
+                await ctx.author.send(s)
                 s = "```ml\n"
                 i= 0
         if(i != 0):
             s += "```"
-            await self.bot.whisper(s)
-            await self.bot.reply("Resultate übermittelt :envelope_with_arrow: ")
+            await ctx.author.send(s)
+            await ctx.send(ctx.author.mention + "Resultate übermittelt :envelope_with_arrow: ")
         elif(emptyResult == True):
-            await self.bot.reply("Keine Statistik für Spieler " + player + " gefunden.")
+            await ctx.send(ctx.author.mention + "Keine Statistik für Spieler " + player + " gefunden.")
 
 
     @commands.command()
-    async def gtaplayerstats(self, player : str):
+    async def gtaplayerstats(self, ctx, player : str):
         """Diverse Statistiken zu dem Spieler.
             Der angegebene Spieler muss so geschrieben sein, wie der GTA ingame Nickname."""
         first = True
@@ -523,23 +525,23 @@ class Gta:
             first = False
         embed.add_field(name="Schlechtester Rang in diesen Playlisten", value ="``" + worstPlaylists + "``")
 
-        await self.bot.say(embed=embed)
+        await ctx.send(embed=embed)
 
     @commands.command()
-    async def updategta(self, delete : bool = False, create : bool = False):
+    async def updategta(self, ctx, delete : bool = False, create : bool = False):
         """Updatet die GTA Datenbank"""
         try:
             global gtaCur
             global gtaConn
-            await self.bot.say("Updating Gta Database ...")
+            await ctx.send("Updating Gta Database ...")
             #gtaCur.close()
             #gtaConn.close()
             gta = sheets.Gtasheet(delete, create, True, self.gtaConn)
             gta.update_database()
-            await self.bot.say("Update finished!")
+            await ctx.send("Update finished!")
         except Exception as e:
             self.logger.error(e)
-            await self.bot.say("Error, check log :robot:")
+            await ctx.send("Error, check log :robot:")
 
         try:
             self.gtaConn = sqlite3.connect('db/gta.db')
@@ -548,38 +550,37 @@ class Gta:
             self.logger.error(e)
 
     @commands.command()
-    async def pointezeit(self, time = ""):
-        userPointe = discord.utils.get(self.bot.get_all_members(), id='368113080741265408')
+    async def pointezeit(self, ctx, time = ""):
+        userPointe = discord.utils.get(self.bot.get_all_members(), id=368113080741265408)
         msg = "Juhu, "
         if userPointe == None:
             msg += "Pointeblanc"
         else:
             msg += userPointe.mention
         msg += " ist hier! Jetzt geht die Party ab!"
-        await self.bot.say(msg) 
+        await ctx.send(msg) 
         for channel in self.bot.get_all_channels():
-            if(channel.server.name == "Unterwasserpyromanen" and "GTA 5" in channel.name):
+            if(channel.guild.name == "Unterwasserpyromanen" and "GTA 5" in channel.name):
                 try:
-                    vc = await self.bot.join_voice_channel(testChan)
-                    player = vc.create_ffmpeg_player('/home/pi/workspace/AllstarBot/media/pointeblanc_1.mp3', after=lambda: print('done'))
-                    player.start()
-                    while not player.is_done():
-                        await asyncio.sleep(1)
+                    vc = await channel.connect()
+                    vc.play(discord.FFmpegPCMAudio('/home/pi/workspace/AllstarBot/media/pointeblanc_1.mp3'), after=lambda e: print('done', e))
+                    while vc.is_playing():
+                        await asyncio.sleep(3)
                     # disconnect after the player has finished
-                    player.stop()
+                    vc.stop()
                     await vc.disconnect()
-                except:
-                    print("oh nein")
+                except Exception as e:
+                    self.logger.error(e)
 
     @commands.command()
-    async def gtaplayerlist(self):
+    async def gtaplayerlist(self, ctx):
         outStr = "Folgende Spieler haben bereits am GTA Donnerstag teilgenommen: "
         for row in self.gtaCur.execute("""Select distinct name from player"""):
             outStr += row[0] + ", "
         outStr = outStr[:-2] # remove last comma
-        await self.bot.say(outStr)
+        await ctx.send(outStr)
         
 
     @commands.command()
-    async def gta2018(self):
-        await self.bot.say("http://allstar-bot.com/gta2018/")
+    async def gta2018(self, ctx):
+        await ctx.send("http://allstar-bot.com/gta2018/")

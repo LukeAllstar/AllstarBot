@@ -70,7 +70,7 @@ def token():
         token = data.get('token').strip('\"')
     return os.environ.get('TOKEN') or token
         
-# DISCORD BOT
+# DISCORD BOT (CLIENT)
 bot = commands.Bot(command_prefix=data["command_prefix"], description=data["description"])
 # maybe usefull later:
 
@@ -95,11 +95,11 @@ async def on_ready():
 bot.remove_command("help")
 
 @bot.command()
-async def help():
-    await bot.reply("Die Hilfe für die Befehle findest du hier: http://allstar-bot.com/commands/")
+async def help(ctx):
+    await ctx.send(ctx.author.mention + " Die Hilfe für die Befehle findest du hier: http://allstar-bot.com/commands/")
 
 #@bot.command
-#async def help(category : str = ""):
+#async def help(ctx, category : str = ""):
 #    helptext = "```"
 #    category = category.lower()
 #    if category == "":
@@ -118,7 +118,7 @@ async def help():
 #    helptext += "```"
 
 @bot.command(aliases=["zitat"])
-async def quote(name : str = ""):
+async def quote(ctx, name : str = ""):
     """Zitat eines Communitymitglieds"""
     #Selects a random quote from the database.
     #If a name parameter is given it searches for a quote from that person
@@ -129,40 +129,40 @@ async def quote(name : str = ""):
                                     ORDER BY RANDOM() LIMIT 1)""")
     row = quotesCur.fetchone()
     if(row != None):
-        await bot.say('>>> %s\n- %s' % (row[0], row[1]))
+        await ctx.send('>>> %s\n- %s' % (row[0], row[1]))
     else:
-        await bot.say("Kein Zitat von '%s' gefunden.\nHier nimm ein :ice_cream: stattdessen." % name)
+        await ctx.send("Kein Zitat von '%s' gefunden.\nHier nimm ein :ice_cream: stattdessen." % name)
 
-@bot.command(pass_context=True, aliases=["addzitat"])
+@bot.command(aliases=["addzitat"])
 async def addquote(ctx, quote : str = None, name : str = None):
     """Neues Zitat erstellen"""
     # Adds one quote to the database. Adds the person who issued the command to the table
     if quote == None or name == None:
-        await bot.say('```!addquote "<quote>" "<name>"```')
+        await ctx.send('```!addquote "<quote>" "<name>"```')
     else:
-        quotesCur.execute("""INSERT INTO quotes (quote, name, addedBy) VALUES ('%s', '%s', '%s')""" % (quote, name, ctx.message.author))
+        quotesCur.execute("""INSERT INTO quotes (quote, name, addedBy) VALUES ('%s', '%s', '%s')""" % (quote, name, ctx.author))
         quotesConn.commit()
         try:
             outMessage = '>>> ' # Discord Multiline Quote
             outMessage += quote
             outMessage += '\n'
             outMessage += '- ' + name
-            await bot.delete_message(ctx.message)
-            await bot.say("Neues Zitat von " + ctx.message.author.name + " hinzugefügt.")
-            await bot.say(outMessage)
+            await ctx.message.delete()
+            await ctx.send("Neues Zitat von " + ctx.author.name + " hinzugefügt.")
+            await ctx.send(outMessage)
         except discord.Forbidden as e:
-            await bot.say("Zitat hinzugefuegt")
+            await ctx.send("Zitat hinzugefuegt")
         
-@bot.command(pass_context=True)
+@bot.command()
 async def friends(ctx):
     """Freunde!"""
-    user = discord.utils.get(ctx.message.server.members, name = 'Lefty')
-    await bot.say(":robot: My only friend is " + user.mention)
+    user = discord.utils.get(ctx.guild.members, name = 'Lefty')
+    await ctx.send(":robot: My only friend is " + user.mention)
         
 
    
 """   
-@bot.command(pass_context=True)
+@bot.command()
 async def testupload(ctx, text):
     logger.debug(text)
     logger.debug(ctx.message)
@@ -187,84 +187,84 @@ def write_to_file(filename, content):
 """
 
 @bot.command(aliases=["istesdonnerstag", "istheutedonnerstag", "istodaythursday"])
-async def isitthursday():
+async def isitthursday(ctx):
     if(datetime.datetime.today().weekday() == 3):
-        await bot.say("yes")
+        await ctx.send("yes")
     else:
-        await bot.say("no")
+        await ctx.send("no")
 
 ###########################
 ### Roles #################
 ###########################
 
-@bot.command(pass_context=True, aliases=["joinrole"])
+@bot.command(aliases=["joinrole"])
 async def joingroup(ctx, *groups):
-    member = ctx.message.author
+    member = ctx.author
     
     for group in groups:
         botCur.execute("""SELECT server, name from allowedroles 
-                                WHERE server = '""" + member.server.name + """'
+                                WHERE server = '""" + member.guild.name + """'
                                 AND LOWER(name) = LOWER('""" + group + """')
                                 """)
         row = botCur.fetchone()
         if(row != None):
-            role = discord.utils.get(member.server.roles, name=row[1])
-            await bot.add_roles(member, role)
-            await bot.reply("Du wurdest zur Gruppe " + row[1] + " hinzugefügt!")
+            role = discord.utils.get(member.guild.roles, name=row[1])
+            await member.add_roles(role)
+            await ctx.send(ctx.author.mention + " Du wurdest zur Gruppe " + row[1] + " hinzugefügt!")
         else:
-            await bot.reply("Die Gruppe '" + group + "' ist nicht erlaubt.")
+            await ctx.send(ctx.author.mention + " Die Gruppe '" + group + "' ist nicht erlaubt.")
 
-@bot.command(pass_context=True, aliases=["leaverole"])
+@bot.command(aliases=["leaverole"])
 async def leavegroup(ctx, group):
-    member = ctx.message.author
+    member = ctx.author
     botCur.execute("""SELECT server, name from allowedroles 
-                            WHERE server = '""" + member.server.name + """'
+                            WHERE server = '""" + member.guild.name + """'
                             AND LOWER(name) = LOWER('""" + group + """')
                             """)
     row = botCur.fetchone()
     if(row == None):
-        await bot.reply("Diese Gruppe ist nicht erlaubt")
+        await ctx.send(ctx.author.mention + "Diese Gruppe ist nicht erlaubt")
     elif(group.lower() in [y.name.lower() for y in member.roles]):
-        role = discord.utils.get(member.server.roles, name=row[1])
-        await bot.remove_roles(member, role)
-        await bot.reply("Du wurdest aus der Gruppe " + row[1] + " entfernt!")
+        role = discord.utils.get(member.guild.roles, name=row[1])
+        await member.remove_roles(role)
+        await ctx.send(ctx.author.mention + " Du wurdest aus der Gruppe " + row[1] + " entfernt!")
     else:
-        await bot.reply("Du bist nicht in dieser Gruppe")
+        await ctx.send(ctx.author.mention + " Du bist nicht in dieser Gruppe")
         
-@bot.command(pass_context=True, aliases=["roles", "rollen", "gruppen"])
+@bot.command(aliases=["roles", "rollen", "gruppen"])
 async def groups(ctx):
-    member = ctx.message.author
+    member = ctx.author
     msg = "Du bist derzeit in folgenden Gruppen: \n"
     
     memberRoles = [y.name.lower() for y in member.roles]
 
     for group in botCur.execute("""SELECT name from allowedroles 
-                                WHERE server = '""" + member.server.name + """'
+                                WHERE server = '""" + member.guild.name + """'
                                 """):
         if (group[0].lower() in memberRoles):
             msg += group[0]
             msg += ", "
     msg = msg[:-2] # remove last comma
-    await bot.say(msg)
+    await ctx.send(msg)
 
-@bot.command(pass_context=True, aliases=["showmembers", "members"])
+@bot.command(aliases=["showmembers", "members"])
 async def groupmembers(ctx, group = ""):
     if group == "":
-        await bot.reply("Die Gruppen und die dazugehörigen Mitglieder findest du hier: http://allstar-bot.com/groupmembers/")
+        await ctx.send(ctx.author.mention + "Die Gruppen und die dazugehörigen Mitglieder findest du hier: http://allstar-bot.com/groupmembers/")
     else:
         # Mitglieder einer bestimmten Gruppe ausgeben
-        member = ctx.message.author
-        members = ctx.message.server.members
+        member = ctx.author
+        members = ctx.guild.members
         memberList = []
         msg = "Derzeit sind folgende Personen in der Gruppe "
 
         botCur.execute("""SELECT server, name from allowedroles 
-                                WHERE server = '""" + member.server.name + """'
+                                WHERE server = '""" + member.guild.name + """'
                                 AND LOWER(name) = LOWER('""" + group + """')
                                 """)
         row = botCur.fetchone()
         if(row == None):
-            await bot.reply("Diese Gruppe ist nicht erlaubt")
+            await ctx.send(ctx.author.mention + "Diese Gruppe ist nicht erlaubt")
         else:
             # iterate through server members and check their roles
             for currentMember in members:
@@ -278,12 +278,12 @@ async def groupmembers(ctx, group = ""):
                 msg += currentMember.name + ", "
 
             msg = msg[:-2]  # remove last comma
-            await bot.reply(msg)
+            await ctx.send(ctx.author.mention + msg)
 
 async def getGroupMembers(servername):
     groupmembers = defaultdict(list)
     groups = await getGroupsOfServer(servername)
-    for server in bot.servers:
+    for server in bot.guilds:
         if(server.name == servername):
             for group in groups:
                 for member in server.members:
@@ -302,62 +302,62 @@ async def getGroupsOfServer(servername):
     return groups
 
 
-@bot.command(pass_context=True, aliases=["allowedroles"])
+@bot.command(aliases=["allowedroles"])
 async def allowedgroups(ctx):
-    member = ctx.message.author
+    member = ctx.author
     msg = "Folgende Gruppen sind erlaubt: \n"
     #for group in botCur.execute("""SELECT name from allowedroles 
-    #                        WHERE server = '""" + member.server.name + """'
+    #                        WHERE server = '""" + member.guild.name + """'
     #                        """):
     #    msg += group[0]
     #    msg += ", "
     #msg = msg[:-2] # remove last comma
-    groups = await getGroupsOfServer(member.server.name)
+    groups = await getGroupsOfServer(member.guild.name)
     for group in groups:
         msg += group
         msg += ", "
     msg = msg[:-2] # remove last comma
-    await bot.say(msg)
+    await ctx.send(msg)
 
-@bot.command(pass_context=True, aliases=["addallowedgroup"])
+@bot.command(aliases=["addallowedgroup"])
 @commands.has_any_role("Moderator", "Handlanger 👷")
 async def addallowedrole(ctx, group):
-    member = ctx.message.author
-    role = discord.utils.get(member.server.roles, name=group)
+    member = ctx.author
+    role = discord.utils.get(member.guild.roles, name=group)
     if(role != None):
-        await addRole(member.server.name, group)
-        await bot.reply("Rolle " + group + " zu den erlaubten Rollen hinzugefügt")
+        await addRole(member.guild.name, group)
+        await ctx.send(ctx.author.mention + "Rolle " + group + " zu den erlaubten Rollen hinzugefügt")
     else:
-        await bot.reply("Rolle " + group + " existiert nicht")
+        await ctx.send(ctx.author.mention + "Rolle " + group + " existiert nicht")
 
-@bot.command(pass_context=True, aliases=["createallowedgroup"])
+@bot.command(aliases=["createallowedgroup"])
 @commands.has_any_role("Moderator", "Handlanger 👷")
 async def createallowedrole(ctx, group):
-    member = ctx.message.author
-    await bot.create_role(member.server, name=group, mentionable=True)
-    await addRole(member.server.name, group)
-    await bot.reply("Rolle " + group + " erstellt und zu den erlaubten Rollen hinzugefügt")
+    member = ctx.author
+    await member.guild.create_role(name=group, mentionable=True)
+    await addRole(member.guild.name, group)
+    await ctx.send(ctx.author.mention + " Rolle " + group + " erstellt und zu den erlaubten Rollen hinzugefügt")
 
 async def addRole(server, role):
     botCur.execute("""Insert Into allowedroles(server, name)
                             values('""" + server + """', '""" + role + """') """)
     botConn.commit()
 
-@bot.command(pass_context=True, aliases=["deleteallowedgroup"])
+@bot.command(aliases=["deleteallowedgroup"])
 @commands.has_any_role("Moderator", "Handlanger 👷")
 async def deleteallowedrole(ctx, group):
-    member = ctx.message.author
-    role = discord.utils.get(member.server.roles, name=group)
-    await deleteRole(member.server.name, group)
-    await bot.delete_role(member.server, role)
-    await bot.reply("Rolle " + group + " aus db und discord entfernt")
+    member = ctx.author
+    role = discord.utils.get(member.guild.roles, name=group)
+    await deleteRole(member.guild.name, group)
+    await role.delete()
+    await ctx.send(ctx.author.mention + " Rolle " + group + " aus db und discord entfernt")
 
-@bot.command(pass_context=True, aliases=["removeallowedgroup"])
+@bot.command(aliases=["removeallowedgroup"])
 @commands.has_any_role("Moderator", "Handlanger 👷")
 async def removeallowedrole(ctx, group):
-    member = ctx.message.author
-    await deleteRole(member.server.name, group)
-    await bot.reply("Rolle " + group + " ist nicht mehr erlaubt (Die Rolle existiert weiterhin in Discord)")
+    member = ctx.author
+    await deleteRole(member.guild.name, group)
+    await ctx.send(ctx.author.mention + " Rolle " + group + " ist nicht mehr erlaubt (Die Rolle existiert weiterhin in Discord)")
 
 async def deleteRole(server, role):
     botCur.execute("""Delete from allowedroles
@@ -368,25 +368,25 @@ async def deleteRole(server, role):
 ### END ROLES ###
 
 #@bot.command()
-async def getUserList():
-    user = await bot.get_user_info(117416669810393097)
+async def getUserList(ctx):
+    user = await bot.fetch_user(117416669810393097)
     logger.debug(user)
-    #for server in bot.servers:
+    #for server in bot.guild:
     #    #logger.debug(server)
     #    logger.debug('-' + server.name)
     #    for member in server.members:
     #        logger.debug('---' + member.name + ', ' + member.id)
 
 #@bot.command()
-async def testMsgReaction():
-    msg = await bot.say("this is a test")
+async def testMsgReaction(ctx):
+    msg = await ctx.send("this is a test")
     logger.debug("original msg: ")
     logger.debug(msg)
     await bot.add_reaction(msg, '\U0001F44D')
-    #emojis = bot.get_all_emojis()
+    #emojis = bot.emojis()
     #logger.debug(emojis)
     await asyncio.sleep(10)
-    cache_msg = discord.utils.get(bot.messages, id=msg.id)
+    cache_msg = discord.utils.get(bot.cached_messages, id=int(msg.id))
     logger.debug("new msg: ")
     logger.debug(cache_msg)
     logger.debug(cache_msg.reactions)
@@ -396,17 +396,17 @@ async def testMsgReaction():
         logger.debug(reaction.count)
         
     logger.debug("test")
-    emojis=bot.get_all_emojis()
+    emojis=bot.emojis()
     logger.debug(emojis)
     for emoji in emojis:
         logger.debug(emoji)
         
-#@bot.command(pass_context=True)
+#@bot.command()
 async def msgStat(ctx):
-    #cache_msg = discord.utils.get(bot.messages, id=510217606599409704)
-    cache_msg = await bot.get_message(ctx.message.channel, 510222196459831296)
-    logger.debug(ctx.message.channel)
-    logger.debug(ctx.message.channel.id)
+    #cache_msg = discord.utils.get(bot.cached_messages, id=510217606599409704)
+    cache_msg = await ctx.channel.fetch_message(510222196459831296)
+    logger.debug(ctx.channel)
+    logger.debug(ctx.channel.id)
     logger.debug("new msg: ")
     logger.debug(cache_msg)
     logger.debug(cache_msg.reactions)
@@ -416,7 +416,7 @@ async def msgStat(ctx):
         logger.debug(reaction.count)
         
 #@bot.command()
-async def testGetResult():
+async def testGetResult(ctx):
     api = strawpoll.API()
     resultPoll = await api.get_poll("https://www.strawpoll.me/16760672")
     logger.debug(resultPoll.result_at(0))
@@ -434,26 +434,27 @@ async def testGetResult():
     
     logger.debug("Die Rammerdestages sind: %s" % winners)
 
-#@bot.command(pass_context=True)
+#@bot.command()
 async def testVoice(ctx):
-	channel = ctx.message.author.voice.voice_channel
-	vc = await bot.join_voice_channel(channel)
-	player = vc.create_ffmpeg_player('/home/pi/rammer_des_tages.mp3', after=lambda: print('done'))
-	player.start()
-	while not player.is_done():
-		await asyncio.sleep(1)
-	# disconnect after the player has finished
-	player.stop()
-	await vc.disconnect()
+    if ctx.message.author.voice:
+        channel = ctx.author.voice.channel
+        vc = await channel.connect()
+        vc.play(discord.FFmpegPCMAudio('/home/pi/rammer_des_tages.mp3'), after=lambda e: print('done', e))
+        while vc.is_playing():
+            await asyncio.sleep(3)
+        # disconnect after the player has finished
+        vc.stop()
+        await vc.disconnect()
 
+# TODO: Move to gtaCommands with @commands.Cog.listener()
 @bot.event
-async def on_voice_state_update(before, after):
+async def on_voice_state_update(member, before, after):
     # pointe: 368113080741265408
     # luke: 117416669810393097
     searchid = '368113080741265408'
     # pointezeit 
     logger.debug("checking for pointetime")
-    if after.id == searchid and after.voice.voice_channel is not None and "GTA" in after.voice.voice_channel.name:
+    if member.id == searchid and after.channel is not None and "GTA" in after.channel.name:
         logger.debug("correct user and channel")
         now = datetime.datetime.today()
         logger.debug(now)
@@ -480,45 +481,43 @@ async def on_voice_state_update(before, after):
                     pointefile.write("\n")
 
                 try:
-                    for c in bot.get_all_channels():
-                        if(c.server.name == "Unterwasserpyromanen" and "GTA 5" in c.name):
-                            vc = await bot.join_voice_channel(c)
-                            player = vc.create_ffmpeg_player('/home/pi/workspace/AllstarBot/media/pointeblanc_1.mp3', after=lambda: print('done'))
-                            player.start()
-                            while not player.is_done():
-                                await asyncio.sleep(1)
+                    for c in self.bot.get_all_channels():
+                        if(c.guild.name == "Unterwasserpyromanen" and "GTA 5" in c.name):
+                            vc = await c.connect()
+                            vc.play(discord.FFmpegPCMAudio('/home/pi/workspace/AllstarBot/media/pointeblanc_1.mp3'), after=lambda e: print('done', e))
+                            while vc.is_playing():
+                                await asyncio.sleep(3)
                             # disconnect after the player has finished
-                            player.stop()
+                            vc.stop()
                             await vc.disconnect()
                 except:
                     logger.error("fehler bei pointezeit")
 
-                for channel in after.server.channels:
+                for channel in after.guild.channels:
                     if "gta5" in channel.name:
                         logger.debug("posting in channel " + str(channel.name))
-                        user = discord.utils.get(bot.get_all_members(), id='368113080741265408')
+                        user = discord.utils.get(bot.get_all_members(), id=368113080741265408)
                         msg = "Endlich ist "
                         if user == None:
                             msg += "Pointeblanc"
                         else:
                             msg += user.mention
                         msg += " da! Jetzt gehts erst so richtig los! :boom: "
-                        await bot.send_message(channel, msg)
+                        await channel.send(msg)
 
-@bot.command()
-async def pointespass():
+#@bot.command()
+async def pointespass(ctx):
     logger.info("pointespass")
     for channel in bot.get_all_channels():
-        if(channel.server.name == "Unterwasserpyromanen" and "GTA 5" in channel.name):
+        if(channel.guild.name == "Unterwasserpyromanen" and "GTA 5" in channel.name):
             logger.info("found channel")
             try:
-                vc = await bot.join_voice_channel(channel)
-                player = vc.create_ffmpeg_player('/home/pi/workspace/AllstarBot/media/gehtslos.mp3', after=lambda: print('done'))
-                player.start()
-                while not player.is_done():
-                    await asyncio.sleep(1)
+                vc = await channel.connect()
+                vc.play(discord.FFmpegPCMAudio('/home/pi/workspace/AllstarBot/media/gehtslos.mp3'), after=lambda e: print('done', e))
+                while vc.is_playing():
+                    await asyncio.sleep(3)
                 # disconnect after the player has finished
-                player.stop()
+                vc.stop()
                 await vc.disconnect()
             except:
                 print("oh nein")
@@ -526,7 +525,7 @@ async def pointespass():
 async def eventScheduler():
     """This scheduler runs every hour"""
     await bot.wait_until_ready()
-    while not bot.is_closed:
+    while not bot.is_closed():
         now = datetime.datetime.today()
         if(now.day == 3): # gif of the month - 3rd day of the month
             if(now.hour == 15): # at 12:00
@@ -561,7 +560,7 @@ async def eventScheduler():
     logger.error("something went wrong in gif of the month")
 
 ##### WEBSERVER #####
-class Webapi():
+class Webapi(commands.Cog):
 
         def __init__(self, bot, gtaCog):
            self.bot = bot
@@ -571,8 +570,8 @@ class Webapi():
             async def handler(request):
                 #await self.bot.change_presence(game=discord.Game(name="TEST"))
                 for channel in self.bot.get_all_channels():
-                    if(channel.server.name == "Lukes Playground" and "test" == channel.name):
-                        await self.bot.send_message(channel, "This is awesome")
+                    if(channel.guild.name == "Lukes Playground" and "test" == channel.name):
+                        await channel.send("This is awesome")
                 return web.Response(text="it worked")
 				
             async def rammer(request):
@@ -582,7 +581,7 @@ class Webapi():
             async def getusername(request):
                 id = request.rel_url.query['id']
                 logger.debug(id)
-                user = await self.bot.get_user_info(id)
+                user = await self.bot.fetch_user(id)
                 return web.Response(text=user.name)
 
             async def groupmembersapi(request):
