@@ -48,7 +48,7 @@ class Gif(commands.Cog):
                 await ctx.message.delete()
                 gifMsg = await ctx.send(outMessage)
                 # default "upvote"
-                await self.bot.add_reaction(gifMsg, '👍')
+                await gifMsg.add_reaction('👍')
                 # after sending the message update the entry to save the message id and the channel id
                 self.gifsCur.execute("""UPDATE gifs SET messageId = '%s', channelId = '%s' WHERE ROWID = %s""" % (gifMsg.id, gifMsg.channel.id, lastid))
                 self.gifsConn.commit()
@@ -240,9 +240,14 @@ class Gif(commands.Cog):
                     await origMsg.delete()
                     self.logger.debug("deleted message")
             
-                # TODO: combo gifs löschen
                 self.gifsCur.execute("""Delete from gifs
                                     where ROWID = """ + id)
+                self.gifsConn.commit()
+                # remove Combogif
+                # TODO: recursive?
+                self.gifsCur.execute("""Delete from comboGifs
+                                    where id1 = """ + id + """
+                                    OR id2 = """ + id)
                 self.gifsConn.commit()
                 with open("deletedgifs.txt", "a") as pollfile:
                     pollfile.write("Deleting gif #" + row[0] + " - " + row[1])
@@ -275,7 +280,7 @@ class Gif(commands.Cog):
         mostReactionsOTM = []
         mostVotes = 0
         mostReactions = 0
-        
+        self.logger.debug("searching for the gif of the month")
         # find the gif of the current week
         for gif in self.gifsCur.execute("""Select game, comment, addedBy, date(addedOn), messageId, channelId, ROWID, url """ +
                         """from gifs """+

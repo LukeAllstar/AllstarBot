@@ -527,8 +527,9 @@ async def eventScheduler():
     await bot.wait_until_ready()
     while not bot.is_closed():
         now = datetime.datetime.today()
+        logger.info("scheduler check with date: " + str(now))
         if(now.day == 3): # gif of the month - 3rd day of the month
-            if(now.hour == 15): # at 12:00
+            if(now.hour == 12): # at 12:00
                 postGotm = True
                 with open("gifsOfTheMonth.txt", "r") as gotmfile:
                     lines = gotmfile.readlines()
@@ -541,6 +542,7 @@ async def eventScheduler():
                         except:
                             logger.warn("ignore parse error in gotm")
                 if(postGotm):
+                    logger.info("posting gif of the month")
                     await gifs.gifOfTheMonth()
                 else:
                     logger.info("Already postet GOTM")
