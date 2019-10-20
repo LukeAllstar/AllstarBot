@@ -369,13 +369,11 @@ async def deleteRole(server, role):
 
 #@bot.command()
 async def getUserList(ctx):
-    user = await bot.fetch_user(117416669810393097)
-    logger.debug(user)
-    #for server in bot.guild:
-    #    #logger.debug(server)
-    #    logger.debug('-' + server.name)
-    #    for member in server.members:
-    #        logger.debug('---' + member.name + ', ' + member.id)
+    #user = await bot.fetch_user(117416669810393097)
+    #logger.debug(user)
+    for user in bot.users:
+        logger.info(str(user.id) + '-' + str(user.name))
+    await ctx.send('Wrote Users to log')
 
 #@bot.command()
 async def testMsgReaction(ctx):
@@ -436,74 +434,138 @@ async def testGetResult(ctx):
 
 #@bot.command()
 async def testVoice(ctx):
-    if ctx.message.author.voice:
-        channel = ctx.author.voice.channel
-        vc = await channel.connect()
-        vc.play(discord.FFmpegPCMAudio('/home/pi/rammer_des_tages.mp3'), after=lambda e: print('done', e))
+    #await ctx.send(str(ctx.author.voice))
+    #await ctx.send(str(ctx.author.voice.channel))
+    if(ctx.author.voice.channel != None):
+        logger.info('joining ' + str(ctx.author.voice.channel))
+        vc = await ctx.author.voice.channel.connect()
+        logger.info('joined --')
+        await asyncio.sleep(0.5)
+        #await asyncio.sleep(5)
+        rammersoundspath = '/home/pi/workspace/AllstarBot/media/rammerdestages'
+        rammersounds = []
+        # r=root, d=directories, f = files
+        for r, d, f in os.walk(rammersoundspath):
+            for file in f:
+                rammersounds.append(file)
+        rammersoundfile = random.choice(rammersounds)
+        logger.info('playing ' + str(rammersoundfile))
+        vc.play(discord.FFmpegPCMAudio(rammersoundspath+'/'+rammersoundfile), after=lambda e: print('done', e))
         while vc.is_playing():
-            await asyncio.sleep(3)
-        # disconnect after the player has finished
-        vc.stop()
+            logger.info('not finished')
+            await asyncio.sleep(1)
         await vc.disconnect()
+        #vc.stop()
+        #vc.disconnect()
+    #try:
+    #    for c in self.bot.get_all_channels():
+    #        if(c.guild.name == "Unterwasserpyromanen" and "GTA 5" in c.name):
+    #            vc = await c.connect()
+    #            await asyncio.sleep(5)
+    #            rammersoundspath = '/home/pi/workspace/AllstarBot/media/rammerdestages'
+    #            rammersounds = []
+    #            # r=root, d=directories, f = files
+    #            for r, d, f in os.walk(rammersoundspath):
+    #                for file in f:
+    #                    rammersounds.append(file)
+    #            rammersoundfile = random.choice(rammersounds)
+    #            vc.play(discord.FFmpegPCMAudio(rammersoundspath+'/'+rammersoundfile), after=lambda e: print('done', e))
+    #            while vc.is_playing():
+    #                await asyncio.sleep(5)
+    #            # disconnect after the player has finished
+    #            vc.stop()
+    #            await vc.disconnect()
+    #except Exception as e:
+    #    self.logger.error("fehler beim Rammer des Tages")
+    #    self.logger.error(str(e))
+
+
+    #if ctx.author.voice:
+    #    channel = ctx.author.voice.channel
+    #    vc = await channel.connect()
+    #    vc.play(discord.FFmpegPCMAudio('/home/pi/rammer_des_tages.mp3'), after=lambda e: print('done', e))
+    #    while vc.is_playing():
+    #        await asyncio.sleep(3)
+    #    # disconnect after the player has finished
+    #    vc.stop()
+    #    await vc.disconnect()
 
 # TODO: Move to gtaCommands with @commands.Cog.listener()
 @bot.event
 async def on_voice_state_update(member, before, after):
-    # pointe: 368113080741265408
-    # luke: 117416669810393097
-    searchid = '368113080741265408'
-    # pointezeit 
-    logger.debug("checking for pointetime")
-    if member.id == searchid and after.channel is not None and "GTA" in after.channel.name:
+    # 368113080741265408-pointeblanc
+    # 117416669810393097-Luke Allstar
+    # 364503822208598026-Redfurn
+    # 364509170642190347-Reaction
+    # 363627304188116993-Sillium
+    # 138785514995056640-hannibal
+    # 368093391508078602-schmenbroad
+    # 365217305300434946-paraSaint
+    # 304615837984358400-Headdy
+    # 189807751009009664-Bob Bobson
+    # 199530298780680192-Lefty
+    # 370626206825185280-TinLizzy
+    # 117703793822531584-Mr.Schnitzel
+    searchids = [368113080741265408, 117416669810393097, 364503822208598026, 364509170642190347, 363627304188116993, 
+                 138785514995056640, 368093391508078602, 365217305300434946, 304615837984358400, 189807751009009664,
+                 199530298780680192, 370626206825185280, 117703793822531584 ]
+    # GTA greetings
+    logger.debug("checking for gta greetings (pointetime)")
+    logger.debug("member: " + str(member))
+    logger.debug("memberid: " + str(member.id))
+    logger.debug("channel: " + str(after.channel))
+    if member.id in searchids and after.channel is not None and "GTA" in after.channel.name:
         logger.debug("correct user and channel")
         now = datetime.datetime.today()
         logger.debug(now)
-        if(now.weekday() == 3 and now.hour >= 19 and now.hour <= 23):
+        if(now.weekday() == 6 and now.hour >= 19 and now.hour <= 23):
             showtime = True
             with open("pointezeit.txt", "r") as pointefile:
                 lines = pointefile.read().splitlines()
                 for line in lines:
+                    playerid=line.split(',')[0]
+                    playertime=line.split(',')[1]
                     logger.debug("line: '"+ line + "'")
                     logger.debug("date: " + str(now.date()))
-                    logger.debug(datetime.datetime.strptime(str(line),"%Y-%m-%dT%H:%M:%S.%f").date())
-                    try:
-                        if(datetime.datetime.strptime(str(line),"%Y-%m-%dT%H:%M:%S.%f").date() == now.date()):
-                            showtime = False
-                            logger.info("already posted pointetime")
-                        else:
-                            showtime = True
-                    except:
-                        logger.error("parse error in pointezeit")
+                    if(playerid == member.id):
+                        # found an entry for the correct member
+                        logger.debug(datetime.datetime.strptime(str(playertime),"%Y-%m-%dT%H:%M:%S.%f").date())
+                        try:
+                            if(datetime.datetime.strptime(str(playertime),"%Y-%m-%dT%H:%M:%S.%f").date() == now.date()):
+                                showtime = False
+                                logger.info("already posted pointetime for player " + str(playerid))
+                        except:
+                            logger.error("parse error in pointezeit")
             if showtime:
                 logger.info("showing pointetime")
                 with open("pointezeit.txt", "a+") as pointefile:
-                    pointefile.write(datetime.datetime.today().isoformat())
+                    pointefile.write(str(member.id) + ',' + datetime.datetime.today().isoformat())
                     pointefile.write("\n")
 
                 try:
-                    for c in self.bot.get_all_channels():
-                        if(c.guild.name == "Unterwasserpyromanen" and "GTA 5" in c.name):
-                            vc = await c.connect()
-                            vc.play(discord.FFmpegPCMAudio('/home/pi/workspace/AllstarBot/media/pointeblanc_1.mp3'), after=lambda e: print('done', e))
-                            while vc.is_playing():
-                                await asyncio.sleep(3)
-                            # disconnect after the player has finished
-                            vc.stop()
-                            await vc.disconnect()
+                    vc = await after.channel.connect()
+                    await asyncio.sleep(0.5)
+                    vc.play(discord.FFmpegPCMAudio('/home/pi/workspace/AllstarBot/media/pointeblanc_1.mp3'), after=lambda e: print('done', e))
+                    while vc.is_playing():
+                        logger.info('not finished')
+                        await asyncio.sleep(1)
+                    await vc.disconnect()
                 except:
                     logger.error("fehler bei pointezeit")
 
-                for channel in after.guild.channels:
-                    if "gta5" in channel.name:
-                        logger.debug("posting in channel " + str(channel.name))
-                        user = discord.utils.get(bot.get_all_members(), id=368113080741265408)
-                        msg = "Endlich ist "
-                        if user == None:
-                            msg += "Pointeblanc"
-                        else:
-                            msg += user.mention
-                        msg += " da! Jetzt gehts erst so richtig los! :boom: "
-                        await channel.send(msg)
+                # also post a message - has to be fixed and isn't desired atm because we don't
+                # want to post a message for ever user joining
+                #for channel in after.guild.channels:
+                #    if "gta5" in channel.name:
+                #        logger.debug("posting in channel " + str(channel.name))
+                #        user = discord.utils.get(bot.get_all_members(), id=368113080741265408)
+                #        msg = "Endlich ist "
+                #        if user == None:
+                #            msg += "Pointeblanc"
+                #        else:
+                #            msg += user.mention
+                #        msg += " da! Jetzt gehts erst so richtig los! :boom: "
+                #        await channel.send(msg)
 
 #@bot.command()
 async def pointespass(ctx):
@@ -513,11 +575,11 @@ async def pointespass(ctx):
             logger.info("found channel")
             try:
                 vc = await channel.connect()
+                await asyncio.sleep(0.5)
                 vc.play(discord.FFmpegPCMAudio('/home/pi/workspace/AllstarBot/media/gehtslos.mp3'), after=lambda e: print('done', e))
                 while vc.is_playing():
-                    await asyncio.sleep(3)
-                # disconnect after the player has finished
-                vc.stop()
+                    logger.info('not finished')
+                    await asyncio.sleep(1)
                 await vc.disconnect()
             except:
                 print("oh nein")

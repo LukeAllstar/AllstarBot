@@ -1,5 +1,5 @@
 google-api-python-client==1.6.4
 httplib2==0.10.3
-discord.py[voice]==1.2.3
+discord.py[voice]==1.2.4
 aiohttp==2.0.0
 -e git://github.com/MJJBennett/strawpoll.py.git#egg=strawpoll.py
