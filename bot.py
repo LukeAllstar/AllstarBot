@@ -506,9 +506,10 @@ async def on_voice_state_update(member, before, after):
     # 199530298780680192-Lefty
     # 370626206825185280-TinLizzy
     # 117703793822531584-Mr.Schnitzel
-    searchids = [368113080741265408, 117416669810393097, 364503822208598026, 364509170642190347, 363627304188116993, 
-                 138785514995056640, 368093391508078602, 365217305300434946, 304615837984358400, 189807751009009664,
-                 199530298780680192, 370626206825185280, 117703793822531584 ]
+    # 365125826829746196-argolam
+    searchids = {368113080741265408: 'pointeblanc', 117416669810393097: 'luke', 364503822208598026: 'redfurn', 364509170642190347: 'reaction', 363627304188116993: 'sillium', 
+                 138785514995056640: 'hannibal', 368093391508078602: 'schmendrick', 365217305300434946: 'para', 304615837984358400: 'headdy', 189807751009009664: 'bob',
+                 199530298780680192: 'lefty', 370626206825185280: 'tinlizzy', 117703793822531584: 'schnitzel', 365125826829746196: 'dave' }
     # GTA greetings
     logger.debug("checking for gta greetings (pointetime)")
     logger.debug("member: " + str(member))
@@ -518,7 +519,7 @@ async def on_voice_state_update(member, before, after):
         logger.debug("correct user and channel")
         now = datetime.datetime.today()
         logger.debug(now)
-        if(now.weekday() == 6 and now.hour >= 19 and now.hour <= 23):
+        if(now.weekday() == 3 and now.hour >= 19 and now.hour <= 23):
             showtime = True
             with open("pointezeit.txt", "r") as pointefile:
                 lines = pointefile.read().splitlines()
@@ -527,13 +528,15 @@ async def on_voice_state_update(member, before, after):
                     playertime=line.split(',')[1]
                     logger.debug("line: '"+ line + "'")
                     logger.debug("date: " + str(now.date()))
-                    if(playerid == member.id):
+                    logger.debug('playerid: ' + str(playerid))
+                    logger.debug('memberid: ' + str(member.id))
+                    if(str(playerid) == str(member.id)):
                         # found an entry for the correct member
                         logger.debug(datetime.datetime.strptime(str(playertime),"%Y-%m-%dT%H:%M:%S.%f").date())
                         try:
                             if(datetime.datetime.strptime(str(playertime),"%Y-%m-%dT%H:%M:%S.%f").date() == now.date()):
                                 showtime = False
-                                logger.info("already posted pointetime for player " + str(playerid))
+                                logger.warning("already posted pointetime for player " + str(playerid))
                         except:
                             logger.error("parse error in pointezeit")
             if showtime:
@@ -545,11 +548,27 @@ async def on_voice_state_update(member, before, after):
                 try:
                     vc = await after.channel.connect()
                     await asyncio.sleep(0.5)
-                    vc.play(discord.FFmpegPCMAudio('/home/pi/workspace/AllstarBot/media/pointeblanc_1.mp3'), after=lambda e: print('done', e))
-                    while vc.is_playing():
-                        logger.info('not finished')
-                        await asyncio.sleep(1)
-                    await vc.disconnect()
+                    intropath = '/home/pi/workspace/AllstarBot/media/intros/'
+                    # find random file for the user
+                    introsounds = []
+                    username = searchids[member.id]
+                    logger.debug('username: ' + str(username))
+                    # r=root, d=directories, f = files
+                    for r, d, f in os.walk(intropath):
+                        for file in f:
+                            if(file.startswith(username)):
+                                introsounds.append(file)
+                    logger.debug('soundfiles: ' + str(introsounds))
+                    if len(introsounds) > 0:
+                        introsoundfile = random.choice(introsounds)
+                        logger.debug('playing soundfile ' + str(introsoundfile))
+                        vc.play(discord.FFmpegPCMAudio(intropath + introsoundfile), after=lambda e: print('done', e))
+                        while vc.is_playing():
+                            logger.info('not finished')
+                            await asyncio.sleep(1)
+                        await vc.disconnect()
+                    else:
+                        logger.debug('No soundfile found')
                 except:
                     logger.error("fehler bei pointezeit")
 
