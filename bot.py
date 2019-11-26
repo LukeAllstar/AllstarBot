@@ -433,6 +433,24 @@ async def testGetResult(ctx):
     logger.debug("Die Rammerdestages sind: %s" % winners)
 
 #@bot.command()
+async def testStrawpoll(ctx):
+    api = strawpoll.API()
+    options = ["a", "b", "c"]
+
+    poll = strawpoll.Poll("Test Strawpoll", options)
+    poll.multi = True
+    poll = await api.submit_poll(poll)
+
+    await ctx.channel.send(poll.url)
+    logger.info("waiting for 300 seconds for vote end")
+    await asyncio.sleep(300)
+
+    # retrieve poll and print the winner(s)
+    logger.info("getting pool results")
+    resultPoll = await api.get_poll(poll.url)
+    await ctx.channel.send(str(resultPoll.results()))
+
+#@bot.command()
 async def testVoice(ctx):
     #await ctx.send(str(ctx.author.voice))
     #await ctx.send(str(ctx.author.voice.channel))
@@ -442,7 +460,7 @@ async def testVoice(ctx):
         logger.info('joined --')
         await asyncio.sleep(0.5)
         #await asyncio.sleep(5)
-        rammersoundspath = '/home/pi/workspace/AllstarBot/media/rammerdestages'
+        rammersoundspath = './media/rammerdestages'
         rammersounds = []
         # r=root, d=directories, f = files
         for r, d, f in os.walk(rammersoundspath):

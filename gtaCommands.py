@@ -80,7 +80,7 @@ class Gta(commands.Cog):
                     name = str(member).split("#")[0]
                     options.append(name)
                     nicknameMapping[name] = member
-                print(options)
+                self.logger.info("voteoptions: " + str(options))
                 if len(options) >= 1:  
                     options.append(fairGefahrenStr)
                     poll = strawpoll.Poll("Rammer des Tages " + now.strftime("%Y-%m-%d"), options)
@@ -121,6 +121,7 @@ class Gta(commands.Cog):
                             self.logger.info("waiting for " + str(3600 * hours) + " seconds for vote end")
                             await asyncio.sleep(3600*hours)
                             # retrieve poll and print the winner(s)
+                            self.logger.info("getting pool results")
                             resultPoll = await api.get_poll(poll.url)
                             orderedResults = resultPoll.results()
                             i = 0
