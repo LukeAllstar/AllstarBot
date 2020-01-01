@@ -20,6 +20,7 @@ from tabletopCommands import Tabletop
 from gifCommands import Gif
 from aiohttp import web
 from collections import defaultdict
+from botUtils import BotUtils
 
 # LOGGING
 logger = logging.getLogger('bot')
@@ -72,11 +73,10 @@ def token():
         
 # DISCORD BOT (CLIENT)
 bot = commands.Bot(command_prefix=data["command_prefix"], description=data["description"])
-# maybe usefull later:
 
-
-# GIFS
+# COGS
 gifs = Gif(bot)
+utilsCog = BotUtils(bot)
 
 # SQLITE
 quotesConn = sqlite3.connect('db/quotes.db')
@@ -452,61 +452,15 @@ async def testStrawpoll(ctx):
 
 #@bot.command()
 async def testVoice(ctx):
-    #await ctx.send(str(ctx.author.voice))
-    #await ctx.send(str(ctx.author.voice.channel))
     if(ctx.author.voice.channel != None):
-        logger.info('joining ' + str(ctx.author.voice.channel))
-        vc = await ctx.author.voice.channel.connect()
-        logger.info('joined --')
-        await asyncio.sleep(0.5)
-        #await asyncio.sleep(5)
-        rammersoundspath = './media/rammerdestages'
+        rammersoundspath = 'media/rammerdestages'
         rammersounds = []
         # r=root, d=directories, f = files
         for r, d, f in os.walk(rammersoundspath):
             for file in f:
                 rammersounds.append(file)
-        rammersoundfile = random.choice(rammersounds)
-        logger.info('playing ' + str(rammersoundfile))
-        vc.play(discord.FFmpegPCMAudio(rammersoundspath+'/'+rammersoundfile), after=lambda e: print('done', e))
-        while vc.is_playing():
-            logger.info('not finished')
-            await asyncio.sleep(1)
-        await vc.disconnect()
-        #vc.stop()
-        #vc.disconnect()
-    #try:
-    #    for c in self.bot.get_all_channels():
-    #        if(c.guild.name == "Unterwasserpyromanen" and "GTA 5" in c.name):
-    #            vc = await c.connect()
-    #            await asyncio.sleep(5)
-    #            rammersoundspath = '/home/pi/workspace/AllstarBot/media/rammerdestages'
-    #            rammersounds = []
-    #            # r=root, d=directories, f = files
-    #            for r, d, f in os.walk(rammersoundspath):
-    #                for file in f:
-    #                    rammersounds.append(file)
-    #            rammersoundfile = random.choice(rammersounds)
-    #            vc.play(discord.FFmpegPCMAudio(rammersoundspath+'/'+rammersoundfile), after=lambda e: print('done', e))
-    #            while vc.is_playing():
-    #                await asyncio.sleep(5)
-    #            # disconnect after the player has finished
-    #            vc.stop()
-    #            await vc.disconnect()
-    #except Exception as e:
-    #    self.logger.error("fehler beim Rammer des Tages")
-    #    self.logger.error(str(e))
-
-
-    #if ctx.author.voice:
-    #    channel = ctx.author.voice.channel
-    #    vc = await channel.connect()
-    #    vc.play(discord.FFmpegPCMAudio('/home/pi/rammer_des_tages.mp3'), after=lambda e: print('done', e))
-    #    while vc.is_playing():
-    #        await asyncio.sleep(3)
-    #    # disconnect after the player has finished
-    #    vc.stop()
-    #    await vc.disconnect()
+        rammersoundfile = rammersoundspath + '/' + str(random.choice(rammersounds))
+        await utilsCog.playSound(ctx.author.voice.channel, rammersoundfile)
 
 # TODO: Move to gtaCommands with @commands.Cog.listener()
 @bot.event
@@ -533,7 +487,12 @@ async def on_voice_state_update(member, before, after):
     logger.debug("member: " + str(member))
     logger.debug("memberid: " + str(member.id))
     logger.debug("channel: " + str(after.channel))
-    if member.id in searchids and after.channel is not None and "GTA" in after.channel.name:
+
+    # check if member joined the GTA channel (ignore other voice state changes)
+    if(member.id in searchids and
+            after.channel is not None and
+            "GTA" in after.channel.name and
+            "GTA" not in before.channel.name):
         logger.debug("correct user and channel")
         now = datetime.datetime.today()
         logger.debug(now)
@@ -562,11 +521,8 @@ async def on_voice_state_update(member, before, after):
                 with open("pointezeit.txt", "a+") as pointefile:
                     pointefile.write(str(member.id) + ',' + datetime.datetime.today().isoformat())
                     pointefile.write("\n")
-
                 try:
-                    vc = await after.channel.connect()
-                    await asyncio.sleep(0.5)
-                    intropath = '/home/pi/workspace/AllstarBot/media/intros/'
+                    intropath = 'media/intros/'
                     # find random file for the user
                     introsounds = []
                     username = searchids[member.id]
@@ -578,31 +534,13 @@ async def on_voice_state_update(member, before, after):
                                 introsounds.append(file)
                     logger.debug('soundfiles: ' + str(introsounds))
                     if len(introsounds) > 0:
-                        introsoundfile = random.choice(introsounds)
+                        introsoundfile = intropath + random.choice(introsounds)
                         logger.debug('playing soundfile ' + str(introsoundfile))
-                        vc.play(discord.FFmpegPCMAudio(intropath + introsoundfile), after=lambda e: print('done', e))
-                        while vc.is_playing():
-                            logger.info('not finished')
-                            await asyncio.sleep(1)
-                        await vc.disconnect()
+                        await utilsCog.playSound(after.channel, introsoundfile)
                     else:
                         logger.debug('No soundfile found')
                 except:
-                    logger.error("fehler bei pointezeit")
-
-                # also post a message - has to be fixed and isn't desired atm because we don't
-                # want to post a message for ever user joining
-                #for channel in after.guild.channels:
-                #    if "gta5" in channel.name:
-                #        logger.debug("posting in channel " + str(channel.name))
-                #        user = discord.utils.get(bot.get_all_members(), id=368113080741265408)
-                #        msg = "Endlich ist "
-                #        if user == None:
-                #            msg += "Pointeblanc"
-                #        else:
-                #            msg += user.mention
-                #        msg += " da! Jetzt gehts erst so richtig los! :boom: "
-                #        await channel.send(msg)
+                    logger.error("fehler bei greeting")
 
 #@bot.command()
 async def pointespass(ctx):
@@ -611,15 +549,9 @@ async def pointespass(ctx):
         if(channel.guild.name == "Unterwasserpyromanen" and "GTA 5" in channel.name):
             logger.info("found channel")
             try:
-                vc = await channel.connect()
-                await asyncio.sleep(0.5)
-                vc.play(discord.FFmpegPCMAudio('/home/pi/workspace/AllstarBot/media/gehtslos.mp3'), after=lambda e: print('done', e))
-                while vc.is_playing():
-                    logger.info('not finished')
-                    await asyncio.sleep(1)
-                await vc.disconnect()
+                await utilsCog.playSound(channel, 'media/gehtslos.mp3')
             except:
-                print("oh nein")
+                logger.error("error in pointespass")
 
 async def eventScheduler():
     """This scheduler runs every hour"""
@@ -651,8 +583,10 @@ async def eventScheduler():
         
         elif(now.weekday() == 3): # gta thursday
             if(now.hour == 20): # at 20:00
+                logger.info("changing presence to GTA Donnerstag")
                 await bot.change_presence(game=discord.Game(name="GTA Donnerstag"))
             if(now.hour == 23): # turn off at 23:00
+                logger.info("removing presence")
                 await bot.change_presence(game=discord.Game(name=""))
         else:
             logger.info("[" + str(now) + "] nothing scheduled")
@@ -707,7 +641,7 @@ class Webapi(commands.Cog):
         def __unload(self):
            asyncio.ensure_future(self.site.stop())
        
-gtaCog = Gta(bot)       
+gtaCog = Gta(bot, utilsCog)       
 webapi = Webapi(bot, gtaCog)
 ##### WEBSERVER END #####
 
@@ -723,6 +657,9 @@ bot.add_cog(gtaCog)
 
 # GIFS
 bot.add_cog(gifs)
+
+# UTILS
+bot.add_cog(utilsCog)
 
 # WEBSERVER
 bot.add_cog(webapi)

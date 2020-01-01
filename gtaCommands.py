@@ -11,11 +11,24 @@ import random
 
 class Gta(commands.Cog):
 
-    def __init__(self, bot):
+    def __init__(self, bot, utils):
         self.bot = bot
+        self.utils = utils
         self.gtaConn = sqlite3.connect('db/gta.db')
         self.gtaCur = self.gtaConn.cursor()
         self.logger = logging.getLogger('bot')
+
+    #@commands.command()
+    async def testVoiceGta(self, ctx):
+        if(ctx.author.voice.channel != None):
+            rammersoundspath = 'media/rammerdestages'
+            rammersounds = []
+            # r=root, d=directories, f = files
+            for r, d, f in os.walk(rammersoundspath):
+                for file in f:
+                    rammersounds.append(file)
+            rammersoundfile = rammersoundspath + '/' + str(random.choice(rammersounds))
+            await self.utils.playSound(ctx.author.voice.channel, rammersoundfile)
 
     @commands.command()
     async def gtavehicles(self, ctx, vehicle : str = ""):
@@ -94,20 +107,14 @@ class Gta(commands.Cog):
                     try:
                         for c in self.bot.get_all_channels():
                             if(c.guild.name == "Unterwasserpyromanen" and "GTA 5" in c.name):
-                                vc = await c.connect()
-                                await asyncio.sleep(0.5)
-                                rammersoundspath = '/home/pi/workspace/AllstarBot/media/rammerdestages'
+                                rammersoundspath = 'media/rammerdestages'
                                 rammersounds = []
                                 # r=root, d=directories, f = files
                                 for r, d, f in os.walk(rammersoundspath):
                                     for file in f:
                                         rammersounds.append(file)
-                                rammersoundfile = random.choice(rammersounds)
-                                vc.play(discord.FFmpegPCMAudio(rammersoundspath+'/'+rammersoundfile), after=lambda e: print('done', e))
-                                while vc.is_playing():
-                                    self.logger.info('not finished')
-                                    await asyncio.sleep(1)
-                                await vc.disconnect()
+                                rammersoundfile = rammersoundspath + '/' + random.choice(rammersounds)
+                                await self.utils.playSound(c, rammersoundfile)
                     except Exception as e:
                         self.logger.error("fehler beim Rammer des Tages")
                         self.logger.error(str(e))
@@ -205,20 +212,14 @@ class Gta(commands.Cog):
             try:
                 for c in self.bot.get_all_channels():
                     if(c.guild.name == "Unterwasserpyromanen" and "GTA 5" in c.name):
-                        vc = await c.connect()
-                        await asyncio.sleep(0.5)
-                        rammersoundspath = '/home/pi/workspace/AllstarBot/media/rammerdestages'
+                        rammersoundspath = 'media/rammerdestages'
                         rammersounds = []
                         # r=root, d=directories, f = files
                         for r, d, f in os.walk(rammersoundspath):
                             for file in f:
                                 rammersounds.append(file)
-                        rammersoundfile = random.choice(rammersounds)
-                        vc.play(discord.FFmpegPCMAudio(rammersoundspath+'/'+rammersoundfile), after=lambda e: print('done', e))
-                        while vc.is_playing():
-                            self.logger.info('not finished')
-                            await asyncio.sleep(1)
-                        await vc.disconnect()
+                        rammersoundfile = rammersoundspath + '/' + random.choice(rammersounds)
+                        await self.utils.playSound(c, rammersoundfile)
             except Exception as e:
                 self.logger.error("fehler beim Rammer des Tages")
                 self.logger.error(str(e))
@@ -561,13 +562,7 @@ class Gta(commands.Cog):
         for channel in self.bot.get_all_channels():
             if(channel.guild.name == "Unterwasserpyromanen" and "GTA 5" in channel.name):
                 try:
-                    vc = await channel.connect()
-                    await asyncio.sleep(0.5)
-                    vc.play(discord.FFmpegPCMAudio('/home/pi/workspace/AllstarBot/media/pointeblanc_1.mp3'), after=lambda e: print('done', e))
-                    while vc.is_playing():
-                        self.logger.info('not finished')
-                        await asyncio.sleep(1)
-                    await vc.disconnect()
+                    await self.utils.playSound(channel, 'media/intros/pointeblanc_gentlemen.mp3')
                 except Exception as e:
                     self.logger.error(e)
 

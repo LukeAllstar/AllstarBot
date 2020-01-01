@@ -285,7 +285,7 @@ class Gtasheet:
                         playlistdate = ''
                     else:
                         playlistdate = str(row[13])
-                    print('new 2019 playlist' + str(row[12]) + ' - ' + playlistdate)
+                    print('new 2019 playlist ' + str(row[12]) + ' - ' + playlistdate)
                     self.insertPlaylist(row[12], playlistdate)
 
                 if len(row) >= 12 and row[8] != None:
@@ -405,5 +405,5 @@ class Gtasheet:
 # just here for testing 
 if __name__ == '__main__':
     gtaConn = sqlite3.connect('db/gta.db')
-    gta = Gtasheet(False, True, False, gtaConn) 
+    gta = Gtasheet(False, True, True, gtaConn) 
     gta.update_database()
