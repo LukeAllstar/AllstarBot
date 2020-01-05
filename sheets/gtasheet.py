@@ -103,7 +103,7 @@ class Gtasheet:
                             isdsq INT,
                             FOREIGN KEY(raceid) REFERENCES race(rowid),
                             FOREIGN KEY(playerid) REFERENCES player(ROWID))''')
-                self.cur.execute('''Create View playerstats as 
+                self.cur.execute('''Create or replace View playerstats as 
                                     with tt(playlistid, playlistname, playername, points) as (
                                                 Select playlistid, x.name as playlistname, player.name as playername, sum(points) as points from
                                                     ( Select *,
@@ -127,6 +127,33 @@ class Gtasheet:
                                                 from tt as my 
                                                 where my.points > s.points and my.playlistid = s.playlistid) as rank
                                     from tt as s''')
+
+                self.cur.execute('''CREATE or replace VIEW playerstats2
+                                    as with tt(playlistid, playlistname, playlistdate, playername, points)
+                                    as ( Select playlistid, x.name as playlistname, x.date as playlistdate, player.name as playername, sum(points) as points
+                                        from ( Select *,
+                                                    CASE WHEN isdsq = 'True' OR isdnf = 'True' THEN 0
+                                                        WHEN rank = 1 THEN 15
+                                                        WHEN rank = 2 THEN 12
+                                                        WHEN rank = 3 THEN 10
+                                                        WHEN rank BETWEEN 4 AND 10 THEN 12 - rank
+                                                        ELSE 1
+                                                        END as points
+                                                    from playlist 
+                                                    join race on race.playlistid = playlist.rowid 
+                                                    join raced on raced.raceid = race.rowid
+                                                ) as x 
+                                            join player on playerid = player.rowid 
+                                            group by playlistid, x.name, playername 
+                                            order by playlistid asc, points desc
+                                            ) 
+                                                Select s.playlistid, s.playlistname, s.playlistdate, s.playername, s.points, (
+                                                    Select count(*)+1 
+                                                    from tt as my 
+                                                    where my.points > s.points 
+                                                    and my.playlistid = s.playlistid)
+                                                as rank 
+                                                from tt as s''')
                 self.conn.commit()
             else:
                 self.cur.execute('''Delete from raced''')
@@ -265,59 +292,65 @@ class Gtasheet:
                     raceid = None
                 
         # 2019 sheet has a different structure
-        rangeName = 'Statistiken (Details) #2019!A2:N'
-        result2019 = service.spreadsheets().values().get(
-            spreadsheetId=spreadsheetId, range=rangeName, valueRenderOption='FORMULA').execute()
-        values2019 = result2019.get('values', [])
+        #rangeName = 'Statistiken (Details) #2019!A2:N'
+        #rangeName2020 = 'Statistiken (Details) #2020!A2:N'
+        rangeNames = ['Statistiken (Details) #2019!A2:N', 'Statistiken (Details) #2020!A2:N']
+        result2019 = service.spreadsheets().values().batchGet(
+            spreadsheetId=spreadsheetId, ranges=rangeNames, valueRenderOption='FORMULA').execute()
+        rangesV2 = result2019.get('valueRanges', [])
+        print('{0} ranges retrieved.'.format(len(rangesV2)))
 
 
-        if not values2019:
-            print('No data found.')
-        else:
-            for row in values2019:
-                #print('%s' % row)
-                
-                if(len(row) >= 13 and row[12] != None):
-                    # new playlist
-                    #print('%s' % row)
-                    if(len(row) < 14):
-                        print("missing date for playlist " + str(row[12]))
-                        playlistdate = ''
-                    else:
-                        playlistdate = str(row[13])
-                    print('new 2019 playlist ' + str(row[12]) + ' - ' + playlistdate)
-                    self.insertPlaylist(row[12], playlistdate)
-
-                if len(row) >= 12 and row[8] != None:
-                    # new race
-                    #print("new race")
-                    vehicle = row[11]
-                    isCanceled = False
-                    if row[1] == None or row[1] == "":
-                        isCanceled = True
-                    playlistid = int(self.getCurrentPlaylistId())
-                    racenumber = self.getNextRaceNumber(playlistid)
-                    self.insertRaceWithMetadata(playlistid, racenumber, isCanceled, row[8], row[9], row[10], row[11])
-                    raceid = self.getCurrentRaceId()
-                    rank = 0
-                    rankmod = 0
-
-                if len(row) >= 7 and row[1] != None and row[2] != None and row[2] != "":
-                    # new raced
-                    #print("new raced")
-                    rank = row[1]
-                    player = row[2].lower()
-                    wrongvehicle = row[3]
-                    if wrongvehicle == "x":
-                        rankmod += 1
-                        rank = 0
-                    racetime = row[4]
-                    bestlap = row[5]
-                    money = row[6]
+        for range in rangesV2:
+            if not range:
+                print('No data found.')
+            else:
+                values = range.get('values', [])
+                print('{0} values in range retrieved.'.format(len(values)))
+                for row in values:
+                    #print('Row: %s' % row)
                     
-                    self.checkPlayer(player)
-                    self.insertRaced(raceid, rank - rankmod, bestlap, racetime, vehicle, player, money, wrongvehicle)
-                    rank += 1
+                    if(len(row) >= 13 and row[12] != None):
+                        # new playlist
+                        print('%s' % row)
+                        if(len(row) < 14):
+                            print("missing date for playlist " + str(row[12]))
+                            playlistdate = ''
+                        else:
+                            playlistdate = str(row[13])
+                        #print('new v2 playlist ' + str(row[12]) + ' - ' + playlistdate)
+                        self.insertPlaylist(row[12], playlistdate)
+
+                    if len(row) >= 12 and row[8] != None:
+                        # new race
+                        #print("new race")
+                        vehicle = row[11]
+                        isCanceled = False
+                        if row[1] == None or row[1] == "":
+                            isCanceled = True
+                        playlistid = int(self.getCurrentPlaylistId())
+                        racenumber = self.getNextRaceNumber(playlistid)
+                        self.insertRaceWithMetadata(playlistid, racenumber, isCanceled, row[8], row[9], row[10], row[11])
+                        raceid = self.getCurrentRaceId()
+                        rank = 0
+                        rankmod = 0
+
+                    if len(row) >= 7 and row[1] != None and row[2] != None and row[2] != "":
+                        # new raced
+                        #print("new raced")
+                        rank = row[1]
+                        player = row[2].lower()
+                        wrongvehicle = row[3]
+                        if wrongvehicle == "x":
+                            rankmod += 1
+                            rank = 0
+                        racetime = row[4]
+                        bestlap = row[5]
+                        money = row[6]
+                        
+                        self.checkPlayer(player)
+                        self.insertRaced(raceid, rank - rankmod, bestlap, racetime, vehicle, player, money, wrongvehicle)
+                        rank += 1
 
         # close
         self.conn.commit()

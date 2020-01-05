@@ -490,9 +490,8 @@ async def on_voice_state_update(member, before, after):
 
     # check if member joined the GTA channel (ignore other voice state changes)
     if(member.id in searchids and
-            after.channel is not None and
-            "GTA" in after.channel.name and
-            "GTA" not in before.channel.name):
+            (after.channel is not None and "GTA" in str(after.channel)) and
+            "GTA" not in str(before.channel)):
         logger.debug("correct user and channel")
         now = datetime.datetime.today()
         logger.debug(now)
