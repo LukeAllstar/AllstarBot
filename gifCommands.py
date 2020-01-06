@@ -284,7 +284,7 @@ class Gif(commands.Cog):
         # find the gif of the current week
         for gif in self.gifsCur.execute("""Select game, comment, addedBy, date(addedOn), messageId, channelId, ROWID, url """ +
                         """from gifs """+
-                        """where date(addedOn) >  date(date('now', '-2 day'), '-1 month')"""):
+                        """where date(addedOn) >  date(date('now', '-3 day'), '-1 month')"""):
             if(gif[4] != None and gif[5] != None):
                 gifChannel = discord.utils.get(self.bot.get_all_channels(), id=int(gif[5]))
                 try:

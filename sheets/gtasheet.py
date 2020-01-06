@@ -406,7 +406,7 @@ class Gtasheet:
             isdnf = True
 
         isDisqualified = False
-        if vehicle == "DSQ" or wrongvehicle == "x":
+        if vehicle == "DSQ" or wrongvehicle is not None and wrongvehicle.lower() == "x":
             isDisqualified = True
             vehicle = ""
             rank = 0

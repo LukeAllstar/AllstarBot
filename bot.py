@@ -556,40 +556,46 @@ async def eventScheduler():
     """This scheduler runs every hour"""
     await bot.wait_until_ready()
     while not bot.is_closed():
-        now = datetime.datetime.today()
-        logger.info("scheduler check with date: " + str(now))
-        if(now.day == 3): # gif of the month - 3rd day of the month
-            if(now.hour == 12): # at 12:00
-                postGotm = True
-                with open("gifsOfTheMonth.txt", "r") as gotmfile:
-                    lines = gotmfile.readlines()
-                    for line in lines:
-                        lineDate=line.split(":")[0]
-                        try:
-                            if(datetime.datetime.strptime(str(lineDate),'%Y-%m-%d').date() == now.date()):
-                                # skip because it has already been posted
-                                postGotm = False
-                        except:
-                            logger.warn("ignore parse error in gotm")
-                if(postGotm):
-                    logger.info("posting gif of the month")
-                    await gifs.gifOfTheMonth()
-                else:
-                    logger.info("Already postet GOTM")
-                #await asyncio.sleep(3600) # sleep for an hour
-            #else:
-                #await asyncio.sleep(3600) # sleep for an hour
-        
-        elif(now.weekday() == 3): # gta thursday
-            if(now.hour == 20): # at 20:00
-                logger.info("changing presence to GTA Donnerstag")
-                await bot.change_presence(game=discord.Game(name="GTA Donnerstag"))
-            if(now.hour == 23): # turn off at 23:00
-                logger.info("removing presence")
-                await bot.change_presence(game=discord.Game(name=""))
-        else:
-            logger.info("[" + str(now) + "] nothing scheduled")
+        try:
+            now = datetime.datetime.today()
+            logger.info("scheduler check with date: " + str(now))
+            if(now.day == 3): # gif of the month - 3rd day of the month
+                if(now.hour == 12): # at 12:00
+
+                    postGotm = True
+                    with open("gifsOfTheMonth.txt", "r") as gotmfile:
+                        lines = gotmfile.readlines()
+                        for line in lines:
+                            lineDate=line.split(":")[0]
+                            try:
+                                if(datetime.datetime.strptime(str(lineDate),'%Y-%m-%d').date() == now.date()):
+                                    # skip because it has already been posted
+                                    postGotm = False
+                            except:
+                                logger.warn("ignore parse error in gotm")
+                    if(postGotm):
+                        logger.info("posting gif of the month")
+                        await gifs.gifOfTheMonth()
+                    else:
+                        logger.info("Already postet GOTM")
+                    #await asyncio.sleep(3600) # sleep for an hour
+                #else:
+                    #await asyncio.sleep(3600) # sleep for an hour
             
+            elif(now.weekday() == 3): # gta thursday
+                if(now.hour == 20): # at 20:00
+                    logger.info("changing presence to GTA Donnerstag")
+                    await bot.change_presence(activity=discord.Game(name="GTA Donnerstag"))
+                if(now.hour == 23): # turn off at 23:00
+                    logger.info("removing presence")
+                    await bot.change_presence(activity=discord.Game(name=""))
+            else:
+                logger.info("[" + str(now) + "] nothing scheduled")
+        except Exception as err:
+            logger.error("Error in Scheduler. {0}".format(err))
+        except:
+            logger.error("2 Error in Scheduler")
+                
         await asyncio.sleep(3600) # always sleep for an hour
     logger.error("something went wrong in gif of the month")
 
