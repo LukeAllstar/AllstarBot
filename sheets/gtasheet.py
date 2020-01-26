@@ -3,6 +3,8 @@ import os
 import sqlite3
 from pathlib import Path
 
+import requests
+import re
 from googleapiclient import discovery
 import oauth2client
 from oauth2client import client
@@ -32,6 +34,7 @@ class Gtasheet:
         self.noauth = noauth
         self.conn = conn
         self.playernames = {}
+        self.vehiclenames = []
     
     #def __init__(self, delete, create, noauth):
     #    self.delete = delete
@@ -43,10 +46,10 @@ class Gtasheet:
         self.create = False
         self.noauth = False
         self.playernames = {}
+        self.vehiclenames = []
         
     def initgta(self):
         print('initgta')
-        playernames = {}
         
         if not os.path.exists('db'):
             print('Creating directory db')
@@ -73,11 +76,13 @@ class Gtasheet:
                     
             if self.create == True:
                 print("creating gta db")
+
                 self.cur.execute('''CREATE TABLE playlist(
                                 name TEXT,
                                 date TEXT,
                                 crasherid INT,
                                 FOREIGN KEY (crasherid) REFERENCES player(ROWID))''')
+
                 self.cur.execute('''CREATE TABLE race(
                                 racenumber INT,
                                 playlistid INT,
@@ -89,8 +94,14 @@ class Gtasheet:
                                 mapper TEXT,
                                 desiredvehicle TEXT,
                                 FOREIGN KEY (playlistid) REFERENCES playlist(ROWID))''')
+
                 self.cur.execute('''CREATE TABLE player(
                                 name TEXT)''')
+
+                self.cur.execute('''CREATE TABLE vehicle(
+                                        name TEXT,
+                                        vehicleclass TEXT)''')
+
                 self.cur.execute('''CREATE TABLE raced(
                             raceid INT,
                             playerid INT,
@@ -102,7 +113,9 @@ class Gtasheet:
                             isdnf INT,
                             isdsq INT,
                             FOREIGN KEY(raceid) REFERENCES race(rowid),
-                            FOREIGN KEY(playerid) REFERENCES player(ROWID))''')
+                            FOREIGN KEY(playerid) REFERENCES player(ROWID)
+                            FOREIGN KEY(vehicle) REFERENCES vehicle(name))''')
+
                 self.cur.execute('''Create or replace View playerstats as 
                                     with tt(playlistid, playlistname, playername, points) as (
                                                 Select playlistid, x.name as playlistname, player.name as playername, sum(points) as points from
@@ -159,7 +172,9 @@ class Gtasheet:
                 self.cur.execute('''Delete from raced''')
                 self.cur.execute('''Delete from race''')
                 self.cur.execute('''Delete from playlist''')
-                self.cur.execute('''Delete from player''')
+                # we don't delete those because they don't change anyway
+                #self.cur.execute('''Delete from player''')
+                #self.cur.execute('''Delete from vehicle''')
                 self.conn.commit()
                 
         except Exception as e:
@@ -285,6 +300,7 @@ class Gtasheet:
                     money = row[6]                   
                     
                     self.checkPlayer(player)
+                    self.addVehicle(vehicle)
                     self.insertRaced(raceid, rank, bestlap, racetime, vehicle, player, money, "")
                     rank += 1
                 else:
@@ -349,6 +365,7 @@ class Gtasheet:
                         money = row[6]
                         
                         self.checkPlayer(player)
+                        self.addVehicle(vehicle)
                         self.insertRaced(raceid, rank - rankmod, bestlap, racetime, vehicle, player, money, wrongvehicle)
                         rank += 1
 
@@ -363,7 +380,7 @@ class Gtasheet:
             calcDate = (datetime.datetime(1899,12,30) + datetime.timedelta(days=int(date))).isoformat()
         except Exception:
             calcDate = ''
-        print("Inserting %s at date %s" % (name, calcDate))
+        #print("Inserting %s at date %s" % (name, calcDate))
         self.cur.execute("""INSERT INTO playlist(name, date)
                             VALUES('"""+name+"""', '""" + calcDate + """')""")
     
@@ -393,10 +410,36 @@ class Gtasheet:
         #                    VALUES(%s, %s, '%s')""" % (playlistid, racenumber, isCanceled))
 
     def insertRaceWithMetadata(self, playlistid, racenumber, isCanceled, racename, socialclub, mapper, desiredvehicle):
-        print("inserting into race '%s', '%s', '%s', '%s', '%s', '%s', '%s'" % (playlistid, racenumber, isCanceled, racename, socialclub, mapper, desiredvehicle))
+        #print("inserting into race '%s', '%s', '%s', '%s', '%s', '%s', '%s'" % (playlistid, racenumber, isCanceled, racename, socialclub, mapper, desiredvehicle))
         self.cur.execute("""INSERT INTO race (playlistid, racenumber, isCanceled, racename, socialclub, mapper, desiredvehicle)
                             VALUES(?, ?, ?, ?, ?, ?, ?)""", (playlistid, racenumber, isCanceled, racename, socialclub, mapper, desiredvehicle))
     
+    def addVehicle(self, vehicle):
+        if vehicle not in self.vehiclenames:
+            self.cur.execute("""Select rowid from vehicle where name=?""", (vehicle,))
+            rows = self.cur.fetchall()
+            if len(rows) == 0:
+                # not found -> add to database
+                # try to get the vehicleclass from the wiki first
+                vehicleclass = self.getVehicleClassFromWiki(vehicle)
+
+                self.cur.execute("""Insert Into vehicle (name, vehicleclass) VALUES (?, ?)""", (vehicle, vehicleclass))
+                print("#### Added vehicle %s with class %s to the database ####" % (vehicle, vehicleclass))
+            self.vehiclenames.append(vehicle)
+
+    def getVehicleClassFromWiki(self, vehicle):
+        vehicleclass = ''
+        vehiclename = str(vehicle).replace(' ', '_')
+        r = requests.get('https://gta.fandom.com/api.php?action=query&prop=revisions&format=json&rvslots=*&rvprop=content&formatversion=2&titles=' + vehiclename)
+        if (r.text != None):
+            print("found wiki result for vehicle %s" % vehicle)
+            vcresult = re.search(r"vehicle_class\s*=\s*([\w\s-]+)", r.text)
+            if(vcresult != None and vcresult.group(1) != None):
+                vehicleclass = vcresult.group(1)
+                print("found vehicleclass %s for vehicle %s" % (vehicleclass, vehicle))
+
+        return vehicleclass
+
     def insertRaced(self, raceid, rank, bestlap, racetime, vehicle, player, money, wrongvehicle):
         if bestlap == "-":
             bestlap = 0
