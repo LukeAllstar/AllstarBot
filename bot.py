@@ -37,7 +37,6 @@ logger.addHandler(handler)
 
 OPUS_LIBS = ['libopus-0.x86.dll', 'libopus-0.x64.dll', 'libopus-0.dll', 'libopus.so.0', 'libopus.0.dylib']
 
-
 def load_opus_lib(opus_libs=OPUS_LIBS):
     if discord.opus.is_loaded():
         return True
@@ -83,6 +82,10 @@ quotesConn = sqlite3.connect('db/quotes.db')
 botConn = sqlite3.connect('db/bot.db') # general bot db -> quotes should be moved there to
 quotesCur = quotesConn.cursor()
 botCur = botConn.cursor()
+
+# GLOBAL VARIABLES
+# - VOTE VARIABLES
+voteMessages = []
 
 @bot.event
 async def on_ready():
@@ -192,6 +195,14 @@ async def isitthursday(ctx):
         await ctx.send("yes")
     else:
         await ctx.send("no")
+
+@bot.command()
+async def startvote(ctx, *options):
+    await utilsCog.startvote(ctx.channel, options)
+
+@bot.command()
+async def timedvote(ctx, waittime, *options):
+    await utilsCog.timedvote(ctx.channel, waittime, options)
 
 ###########################
 ### Roles #################
@@ -615,7 +626,7 @@ class Webapi(commands.Cog):
                 return web.Response(text="it worked")
 				
             async def rammer(request):
-                await self.gtaCog.rammertest()
+                await self.gtaCog.rammerdestages_intern([], 120)
                 return web.Response(text="it worked")
 
             async def getusername(request):

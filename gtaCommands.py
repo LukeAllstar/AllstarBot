@@ -63,7 +63,7 @@ class Gta(commands.Cog):
             s = 'Das Fahrzeug \"' + vehicle + '\" wurde noch nie gefahren'
         await ctx.send(s)
 
-    async def rammertest(self):
+    async def rammerdestages_intern(self, extraOptions, minutes):
         outChan = "gta5"
         voiceChan = "GTA 5"
         for channel in self.bot.get_all_channels():
@@ -71,24 +71,16 @@ class Gta(commands.Cog):
                 chan = channel
         for channel in self.bot.get_all_channels():
             if(channel.guild.name == "Unterwasserpyromanen" and voiceChan in channel.name):
-                #await chan.send("rammer test")
-                #####
-                """Startet einen Strawpoll Vote für den Rammer des Tages. Verwendet werden dafür alle User des angegebenen Voicechannels"""
-                now = datetime.datetime.now()
-                api = strawpoll.API()
                 options = []
                 nicknameMapping = {}
-                fairGefahrenStr = "Alle sind fair gefahren ☺"
+                fairGefahrenStr = "Alle sind fair gefahren 😎"
                 extraOptions = ""
-                hours = 2
                 if "," in extraOptions:
                     for o in extraOptions.split(","):
                         options.append(o)
                 elif extraOptions != "":
                     options.append(extraOptions)
                 
-                #for channel in ctx.guild.channels:
-                #    if chan in channel.name: 
                 for member in channel.members:
                     name = str(member).split("#")[0]
                     options.append(name)
@@ -96,14 +88,7 @@ class Gta(commands.Cog):
                 self.logger.info("voteoptions: " + str(options))
                 if len(options) >= 1:  
                     options.append(fairGefahrenStr)
-                    poll = strawpoll.Poll("Rammer des Tages " + now.strftime("%Y-%m-%d"), options)
-                    poll.multi = True
-                    poll = await api.submit_poll(poll)
-                    await chan.send(file=discord.File("media/RammerDesTages.png"))
-                    #await ctx.send("Jetzt Abstimmen für den Rammer des Tages!")
-                    await chan.send(poll.url)
-                    
-                    ####
+
                     try:
                         for c in self.bot.get_all_channels():
                             if(c.guild.name == "Unterwasserpyromanen" and "GTA 5" in c.name):
@@ -118,168 +103,24 @@ class Gta(commands.Cog):
                     except Exception as e:
                         self.logger.error("fehler beim Rammer des Tages")
                         self.logger.error(str(e))
-                    ####
+
+                    await chan.send(file=discord.File("media/RammerDesTages.png"))
+                    winners = await self.utils.timedvote(chan, minutes, options)
+                    #await chan.send(poll.url)
                     
-                    # log poll url into a file
+                    # log result into a file
                     with open("polls.txt", "a") as pollfile:
-                        pollfile.write(poll.url)
+                        pollfile.write(datetime.datetime.now().isoformat())
+                        pollfile.write(str(winners))
                         pollfile.write("\n")
-                        if(hours > 0 and hours <= 24):
-                            self.logger.info("waiting for " + str(3600 * hours) + " seconds for vote end")
-                            await asyncio.sleep(3600*hours)
-                            # retrieve poll and print the winner(s)
-                            self.logger.info("getting pool results")
-                            resultPoll = await api.get_poll(poll.url)
-                            orderedResults = resultPoll.results()
-                            i = 0
-                            votes = orderedResults[0][1]
-                            winners = []
-                            printWonder = False
-                            
-                            while(len(orderedResults) > i and votes == orderedResults[i][1]):
-                                winners.append(orderedResults[i][0])
-                                i = i + 1
-                            
-                            numberOfWinners = len(winners)
-                            if(fairGefahrenStr in winners):
-                                numberOfWinners -= 1
-                                printWonder = True
-                            
-                            if(numberOfWinners == 1):
-                                gratulateMsg = "Der Rammer des Tages ist "
-                            else:
-                                gratulateMsg = "Die Rammer des Tages sind "
-                            first = True
-                            
-                            for winner in winners:
-                                if(not first):
-                                    if(numberOfWinners == 2):
-                                        gratulateMsg += " und "
-                                    else:
-                                        gratulateMsg += ", "
-                            
-                                if(winner == fairGefahrenStr):
-                                    printWonder = True
-                                elif(winner in nicknameMapping):
-                                    gratulateMsg += nicknameMapping[winner].mention
-                                else:
-                                    # not a user, might be and extra option
-                                    gratulateMsg += winner
-                                first = False
-                            gratulateMsg += " mit " + str(votes) + " Stimmen"
-                            if(printWonder and numberOfWinners == 0):
-                                await chan.send("OH MEIN GOTT! Diesmal sind alle fair gefahren! :tada: ")
-                            elif(printWonder and numberOfWinners > 0):
-                                gratulateMsg += ". Es gab auch " + str(votes) + " Stimmen, dass alle fair gefahren sind :thumbsup:"
-                                await chan.send(gratulateMsg)
-                            else:
-                                await chan.send(gratulateMsg)
                 else:
                     await chan.send("Konnte die Umfrage nicht anlegen. Zu wenige Leute im Channel " + chan.name)
-                #####
-                # todo: rammerdestages funktion umbauen, damit sie von hier aus aufgerufen werden kann
 
     @commands.command()
-    async def rammerdestages(self, ctx, chan:str = "GTA", extraOptions:str = "", hours : int = 2):
+    async def rammerdestages(self, extraOptions:str = "", hours : int = 2):
         """Startet einen Strawpoll Vote für den Rammer des Tages. Verwendet werden dafür alle User des angegebenen Voicechannels"""
-        now = datetime.datetime.now()
-        api = strawpoll.API()
-        options = []
-        nicknameMapping = {}
-        fairGefahrenStr = "Alle sind fair gefahren ☺"
-        if "," in extraOptions:
-            for o in extraOptions.split(","):
-                options.append(o)
-        elif extraOptions != "":
-            options.append(extraOptions)
-        
-        for channel in ctx.guild.channels:
-            if chan in channel.name: 
-                for member in channel.members:
-                    name = str(member).split("#")[0]
-                    options.append(name)
-                    nicknameMapping[name] = member
-        if len(options) >= 2:  
-            options.append(fairGefahrenStr)
-            poll = strawpoll.Poll("Rammer des Tages " + now.strftime("%Y-%m-%d"), options)
-            poll.multi = True
-            poll = await api.submit_poll(poll)
-            await ctx.send(file=discord.File("media/RammerDesTages.png"))
-            #await ctx.send("Jetzt Abstimmen für den Rammer des Tages!")
-            await ctx.send(poll.url)
-            
-            ####
-            try:
-                for c in self.bot.get_all_channels():
-                    if(c.guild.name == "Unterwasserpyromanen" and "GTA 5" in c.name):
-                        rammersoundspath = 'media/rammerdestages'
-                        rammersounds = []
-                        # r=root, d=directories, f = files
-                        for r, d, f in os.walk(rammersoundspath):
-                            for file in f:
-                                rammersounds.append(file)
-                        rammersoundfile = rammersoundspath + '/' + random.choice(rammersounds)
-                        await self.utils.playSound(c, rammersoundfile)
-            except Exception as e:
-                self.logger.error("fehler beim Rammer des Tages")
-                self.logger.error(str(e))
-            ####
-            
-            # log poll url into a file
-            with open("polls.txt", "a") as pollfile:
-                pollfile.write(poll.url)
-                pollfile.write("\n")
-                if(hours > 0 and hours <= 24):
-                    self.logger.debug("waiting for " + str(3600 * hours) + " seconds")
-                    await asyncio.sleep(3600*hours)
-                    # retrieve poll and print the winner(s)
-                    resultPoll = await api.get_poll(poll.url)
-                    orderedResults = resultPoll.results()
-                    i = 0
-                    votes = orderedResults[0][1]
-                    winners = []
-                    printWonder = False
-                    
-                    while(len(orderedResults) > i and votes == orderedResults[i][1]):
-                        winners.append(orderedResults[i][0])
-                        i = i + 1
-                    
-                    numberOfWinners = len(winners)
-                    if(fairGefahrenStr in winners):
-                        numberOfWinners -= 1
-                        printWonder = True
-                    
-                    if(numberOfWinners == 1):
-                        gratulateMsg = "Der Rammer des Tages ist "
-                    else:
-                        gratulateMsg = "Die Rammer des Tages sind "
-                    first = True
-                    
-                    for winner in winners:
-                        if(not first):
-                            if(numberOfWinners == 2):
-                                gratulateMsg += " und "
-                            else:
-                                gratulateMsg += ", "
-                    
-                        if(winner == fairGefahrenStr):
-                            printWonder = True
-                        elif(winner in nicknameMapping):
-                            gratulateMsg += nicknameMapping[winner].mention
-                        else:
-                            # not a user, might be and extra option
-                            gratulateMsg += winner
-                        first = False
-                    gratulateMsg += " mit " + str(votes) + " Stimmen"
-                    if(printWonder and numberOfWinners == 0):
-                        await ctx.send("OH MEIN GOTT! Diesmal sind alle fair gefahren! :tada: ")
-                    elif(printWonder and numberOfWinners > 0):
-                        gratulateMsg += ". Es gab auch " + str(votes) + " Stimmen, dass alle fair gefahren sind :thumbsup:"
-                        await ctx.send(gratulateMsg)
-                    else:
-                        await ctx.send(gratulateMsg)
-        else:
-            await ctx.send("Konnte die Umfrage nicht anlegen. Zu wenige Leute im Channel " + chan)
+        await self.rammerdestages_intern(extraOptions, hours*60)
+
 
     @commands.command()
     async def gtaracewins(self, ctx, player : str = None):
