@@ -64,6 +64,7 @@ class Gta(commands.Cog):
         await ctx.send(s)
 
     async def rammerdestages_intern(self, extraOptions, minutes):
+        self.logger.info("Starting rammerdestages intern with extra options %s and minutes %d", extraOptions, minutes)
         outChan = "gta5"
         voiceChan = "GTA 5"
         for channel in self.bot.get_all_channels():
@@ -74,7 +75,6 @@ class Gta(commands.Cog):
                 options = []
                 nicknameMapping = {}
                 fairGefahrenStr = "Alle sind fair gefahren 😎"
-                extraOptions = ""
                 if "," in extraOptions:
                     for o in extraOptions.split(","):
                         options.append(o)
@@ -117,8 +117,10 @@ class Gta(commands.Cog):
                     await chan.send("Konnte die Umfrage nicht anlegen. Zu wenige Leute im Channel " + chan.name)
 
     @commands.command()
-    async def rammerdestages(self, extraOptions:str = "", hours : int = 2):
+    async def rammerdestages(self, ctx, extraOptions:str = "", hours : int = 2):
         """Startet einen Strawpoll Vote für den Rammer des Tages. Verwendet werden dafür alle User des angegebenen Voicechannels"""
+        # TODO: extra Options dont work anymore?
+        self.logger.info("Starting rammerdestages with parameter extra options %s and hours %d", extraOptions, hours)
         await self.rammerdestages_intern(extraOptions, hours*60)
 
 
