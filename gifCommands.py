@@ -183,7 +183,7 @@ class Gif(commands.Cog):
 
     @commands.command(aliases=["listgifs", "listgif", "searchgifs"])
     async def searchgif(self, ctx, searchterm : str = ""):
-        await ctx.send("Die Gif Suche findest du hier: http://allstar-bot.com/gifsearch/ :robot:")
+        await ctx.send("Die Gif Suche findest du hier: http://allstar-bot.com/bot/gifsearch/ :robot:")
          
     #@commands.command(aliases=["listgifs", "listgif", "searchgifs"])
     #async def searchgif(self, ctx, searchterm : str = ""):

@@ -261,7 +261,7 @@ async def groups(ctx):
 @bot.command(aliases=["showmembers", "members"])
 async def groupmembers(ctx, group = ""):
     if group == "":
-        await ctx.send(ctx.author.mention + "Die Gruppen und die dazugehörigen Mitglieder findest du hier: http://allstar-bot.com/groupmembers/")
+        await ctx.send(ctx.author.mention + "Die Gruppen und die dazugehörigen Mitglieder findest du hier: http://allstar-bot.com/bot/groupmembers/")
     else:
         # Mitglieder einer bestimmten Gruppe ausgeben
         member = ctx.author
@@ -626,7 +626,7 @@ class Webapi(commands.Cog):
                 return web.Response(text="it worked")
 				
             async def rammer(request):
-                await self.gtaCog.rammerdestages_intern([], 120)
+                await self.gtaCog.rammerdestages_intern("", 120)
                 return web.Response(text="it worked")
 
             async def getusername(request):

@@ -66,7 +66,7 @@ class BotUtils(commands.Cog):
             An array of possible options for the vote
         """
         self.logger.debug('timedvote start')
-        self.logger.debug(options)
+        self.logger.info("starting timed vote with options " + str(options))
         try:
             timer = int(waittime)
         except:
@@ -85,9 +85,9 @@ class BotUtils(commands.Cog):
                 await self.addVoteMessageReactions(messages, msg)
 
                 await channel.send('Die Abstimmung läuft. Zeitlimit: ' + str(timer) + ' Minuten')
-                self.logger.debug('Waiting for ' + str(timer) + ' minutes for the vote to end')
+                self.logger.info('Waiting for ' + str(timer) + ' minutes for the vote to end')
                 await asyncio.sleep(timer * 60) # minutes to seconds
-                self.logger.debug('Vote is over. Now counting reactions')
+                self.logger.info('Vote is over. Now counting reactions')
                 
                 # Count Reactions to get the winner(s)
                 updatedMsg = await msg.channel.fetch_message(msg.id)
@@ -169,6 +169,7 @@ class BotUtils(commands.Cog):
 
     async def addVoteMessageReactions(self, messages, discordMessage):
         for key in messages.keys():
+            self.logger.debug("adding reaction " + str(key) + " to the vote.")
             await discordMessage.add_reaction(key)
 
     def getNumberEmoji(self, number):

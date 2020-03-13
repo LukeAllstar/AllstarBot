@@ -420,4 +420,5 @@ class Gta(commands.Cog):
 
     @commands.command()
     async def gta2018(self, ctx):
-        await ctx.send("http://allstar-bot.com/gta2018/")
+        #await ctx.send("http://allstar-bot.com/gta2018/")
+        await ctx.send("http://allstar-bot.com/bot/gta/totalstats?year=2018")
