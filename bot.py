@@ -378,7 +378,7 @@ async def deleteRole(server, role):
 
 ### END ROLES ###
 
-#@bot.command()
+@bot.command()
 async def getUserList(ctx):
     #user = await bot.fetch_user(117416669810393097)
     #logger.debug(user)
@@ -490,9 +490,10 @@ async def on_voice_state_update(member, before, after):
     # 370626206825185280-TinLizzy
     # 117703793822531584-Mr.Schnitzel
     # 365125826829746196-argolam
+    # 211340425582084096-sitzbanause
     searchids = {368113080741265408: 'pointeblanc', 117416669810393097: 'luke', 364503822208598026: 'redfurn', 364509170642190347: 'reaction', 363627304188116993: 'sillium', 
                  138785514995056640: 'hannibal', 368093391508078602: 'schmendrick', 365217305300434946: 'para', 304615837984358400: 'headdy', 189807751009009664: 'bob',
-                 199530298780680192: 'lefty', 370626206825185280: 'tinlizzy', 117703793822531584: 'schnitzel', 365125826829746196: 'dave' }
+                 199530298780680192: 'lefty', 370626206825185280: 'tinlizzy', 117703793822531584: 'schnitzel', 365125826829746196: 'dave', 211340425582084096: 'sitzbanause' }
     # GTA greetings
     logger.debug("checking for gta greetings (pointetime)")
     logger.debug("member: " + str(member))
