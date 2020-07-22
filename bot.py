@@ -44,11 +44,13 @@ def load_opus_lib(opus_libs=OPUS_LIBS):
     for opus_lib in opus_libs:
         try:
             discord.opus.load_opus(opus_lib)
+            logger.info("using opus lib " + str(opus_lib))
             return
-        except OSError:
+        except OSError as err:
+            #logger.error(err)
             pass
 
-        raise RuntimeError('Could not load an opus lib. Tried %s' % (', '.join(opus_libs)))
+    raise RuntimeError('Could not load an opus lib. Tried %s' % (', '.join(opus_libs)))
 
 load_opus_lib(OPUS_LIBS)
 
@@ -99,7 +101,7 @@ bot.remove_command("help")
 
 @bot.command()
 async def help(ctx):
-    await ctx.send(ctx.author.mention + " Die Hilfe für die Befehle findest du hier: http://allstar-bot.com/commands/")
+    await ctx.send(ctx.author.mention + " Die Hilfe für die Befehle findest du hier: https://www.allstar-bot.com/commands/")
 
 #@bot.command
 #async def help(ctx, category : str = ""):
@@ -261,7 +263,7 @@ async def groups(ctx):
 @bot.command(aliases=["showmembers", "members"])
 async def groupmembers(ctx, group = ""):
     if group == "":
-        await ctx.send(ctx.author.mention + "Die Gruppen und die dazugehörigen Mitglieder findest du hier: http://allstar-bot.com/bot/groupmembers/")
+        await ctx.send(ctx.author.mention + "Die Gruppen und die dazugehörigen Mitglieder findest du hier: https://www.allstar-bot.com/bot/groupmembers/")
     else:
         # Mitglieder einer bestimmten Gruppe ausgeben
         member = ctx.author
@@ -461,7 +463,7 @@ async def testStrawpoll(ctx):
     resultPoll = await api.get_poll(poll.url)
     await ctx.channel.send(str(resultPoll.results()))
 
-#@bot.command()
+@bot.command()
 async def testVoice(ctx):
     if(ctx.author.voice.channel != None):
         rammersoundspath = 'media/rammerdestages'
@@ -491,9 +493,11 @@ async def on_voice_state_update(member, before, after):
     # 117703793822531584-Mr.Schnitzel
     # 365125826829746196-argolam
     # 211340425582084096-sitzbanause
+    # 341344617158934528-Mutzli
     searchids = {368113080741265408: 'pointeblanc', 117416669810393097: 'luke', 364503822208598026: 'redfurn', 364509170642190347: 'reaction', 363627304188116993: 'sillium', 
                  138785514995056640: 'hannibal', 368093391508078602: 'schmendrick', 365217305300434946: 'para', 304615837984358400: 'headdy', 189807751009009664: 'bob',
-                 199530298780680192: 'lefty', 370626206825185280: 'tinlizzy', 117703793822531584: 'schnitzel', 365125826829746196: 'dave', 211340425582084096: 'sitzbanause' }
+                 199530298780680192: 'lefty', 370626206825185280: 'tinlizzy', 117703793822531584: 'schnitzel', 365125826829746196: 'dave', 211340425582084096: 'sitzbanause',
+                 341344617158934528: 'mutzli' }
     # GTA greetings
     logger.debug("checking for gta greetings (pointetime)")
     logger.debug("member: " + str(member))

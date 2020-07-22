@@ -168,9 +168,11 @@ class BotUtils(commands.Cog):
         return outmsg
 
     async def addVoteMessageReactions(self, messages, discordMessage):
+        self.logger.info("keys: " + str(messages.keys()))
         for key in messages.keys():
-            self.logger.debug("adding reaction " + str(key) + " to the vote.")
+            self.logger.info("adding reaction " + str(key) + " to the vote.")
             await discordMessage.add_reaction(key)
+            await asyncio.sleep(0.1)
 
     def getNumberEmoji(self, number):
         """
