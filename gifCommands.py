@@ -134,32 +134,57 @@ class Gif(commands.Cog):
         else:
             await ctx.send("Kein Gif zu '%s' gefunden.\nStattdessen gibt es :cake:." % search)        
 
-    @commands.command()
+    @commands.command(aliases=["gifstat"])
     async def gifstats(self, ctx):
         self.gifsCur.execute("""Select count(*) from gifs""")
         row = self.gifsCur.fetchone()
+        self.logger.info("gifstats anzahl gifs: " + str(row[0]))
         
         s = '```ml\n'
-        s += "Anzahl an Gifs: %s\n\n" % row[0]
+        s += "Anzahl an Gifs: " + str(row[0]) + "\n\n"
         s += "| {:<30.29}| {:8s}|\n".format("User","Anzahl")
         s += ('-' * 43)
         s += "\n"
+        count = 0
+        othersCount = 0
         for row in self.gifsCur.execute("""SELECT addedBy, count(*)
                             from gifs
                             group by addedBy
                             order by 2 desc"""):
-            user = await self.bot.fetch_user(int(row[0]))
-            s += "| {:<30.29}| {:<8}|\n".format(user.name, row[1])
+            count += 1
+            self.logger.info("gifstats " + row[0] + " - " + str(row[1]))
+            if(count <= 10):
+                user = await self.bot.fetch_user(int(row[0]))
+                self.logger.info("gifstats " + str(user.name))
+                s += "| {:<30.29}| {:<8}|\n".format(user.name, row[1])
+            else:
+                othersCount += int(row[1])
+            
+        if(othersCount > 0):
+            s += "| {:<30.29}| {:<8}|\n".format("Restliche", othersCount)
+        
         s += '```\n'
         s += '```ml\n'
         s += "| {:<30.29}| {:8s}|\n".format("Spiel","Anzahl")
         s += ('-' * 43)
         s += "\n"
+
+        count = 0
+        othersCount = 0
         for row in self.gifsCur.execute("""SELECT game, count(*)
                             from gifs
                             group by game
                             order by 2 desc"""):
-            s += "| {:<30.29}| {:<8}|\n".format(row[0].split("#")[0], row[1])
+            count += 1
+            self.logger.info("gifstats " + str(row[0]) + " - " + str(row[1]))
+            if(count <= 10):
+                s += "| {:<30.29}| {:<8}|\n".format(row[0].split("#")[0], row[1])
+            else:
+                othersCount += int(row[1])
+
+        if(othersCount > 0):
+            s += "| {:<30.29}| {:<8}|\n".format("Restliche", othersCount)       
+
         s += '```'
         await ctx.send(s)
         
@@ -168,17 +193,21 @@ class Gif(commands.Cog):
         # verify that both ids exist
         self.gifsCur.execute("""Select ROWID from gifs where ROWID = %s""" % (id1))
         row = self.gifsCur.fetchone()
-        if row == None:
+        if(row == None):
             notfound = True
             
         self.gifsCur.execute("""Select ROWID from gifs where ROWID = %s""" % (id2))
         row = self.gifsCur.fetchone()
-        if row == None:
+        if(row == None):
             notfound = True
             
-        self.gifsCur.execute("""INSERT INTO comboGifs (id1, id2) VALUES (%d, %d)""" % (id1, id2))
-        self.gifsConn.commit()
-        await ctx.send("Gifs #%s und #%s wurden zu einem ComboGif vereint :yin_yang: " % (id1, id2))
+        if(notfound):
+            await ctx.send("Keine Gifs zu den beiden IDs gefunden" % (id1, id2))
+        else:
+            self.gifsCur.execute("""INSERT INTO comboGifs (id1, id2) VALUES (%d, %d)""" % (id1, id2))
+            self.gifsConn.commit()
+            await ctx.send("Gifs #%s und #%s wurden zu einem ComboGif vereint :yin_yang: " % (id1, id2))
+
 
 
     @commands.command(aliases=["listgifs", "listgif", "searchgifs"])

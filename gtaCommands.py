@@ -73,7 +73,6 @@ class Gta(commands.Cog):
         for channel in self.bot.get_all_channels():
             if(channel.guild.name == "Unterwasserpyromanen" and voiceChan in channel.name):
                 options = []
-                nicknameMapping = {}
                 fairGefahrenStr = "Alle sind fair gefahren 😎"
                 if "," in extraOptions:
                     for o in extraOptions.split(","):
@@ -81,10 +80,11 @@ class Gta(commands.Cog):
                 elif extraOptions != "":
                     options.append(extraOptions)
                 
+                self.logger.info("channel: " + str(channel))
+                self.logger.info("members: " + str(channel.members))
                 for member in channel.members:
-                    name = str(member).split("#")[0]
-                    options.append(name)
-                    nicknameMapping[name] = member
+                    self.logger.info(str(member.name))
+                    options.append(member.name)
                 self.logger.info("voteoptions: " + str(options))
                 if len(options) >= 1:  
                     options.append(fairGefahrenStr)
@@ -114,7 +114,7 @@ class Gta(commands.Cog):
                         pollfile.write(str(winners))
                         pollfile.write("\n")
                 else:
-                    await chan.send("Konnte die Umfrage nicht anlegen. Zu wenige Leute im Channel " + chan.name)
+                    await chan.send("Konnte die Umfrage nicht anlegen. Zu wenige Leute im Channel " + channel.name)
 
     @commands.command()
     async def rammerdestages(self, ctx, extraOptions:str = "", hours : int = 2):
@@ -202,7 +202,7 @@ class Gta(commands.Cog):
     @commands.command()
     async def gtaplayerstatsfull(self, ctx, player : str):
         """Alle Platzierungen in allen Playlisten eines Spielers.
-        Der angegebene Name muss der Nickname aus GTA sein"""
+        Der angegebene Name muss der * aus GTA sein"""
         i = 0
         emptyResult = True
         s = "```ml\n"

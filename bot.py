@@ -73,7 +73,8 @@ def token():
     return os.environ.get('TOKEN') or token
         
 # DISCORD BOT (CLIENT)
-bot = commands.Bot(command_prefix=data["command_prefix"], description=data["description"])
+intents = discord.Intents.all()
+bot = commands.Bot(command_prefix=data["command_prefix"], description=data["description"], intents=intents)
 
 # COGS
 gifs = Gif(bot)
@@ -262,12 +263,14 @@ async def groups(ctx):
 
 @bot.command(aliases=["showmembers", "members"])
 async def groupmembers(ctx, group = ""):
+    logger.info("groupmembers " + str(group))
     if group == "":
         await ctx.send(ctx.author.mention + "Die Gruppen und die dazugehörigen Mitglieder findest du hier: https://www.allstar-bot.com/bot/groupmembers/")
     else:
         # Mitglieder einer bestimmten Gruppe ausgeben
         member = ctx.author
         members = ctx.guild.members
+
         memberList = []
         msg = "Derzeit sind folgende Personen in der Gruppe "
 
